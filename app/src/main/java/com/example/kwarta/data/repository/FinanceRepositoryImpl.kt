@@ -82,6 +82,12 @@ class FinanceRepositoryImpl(
     override suspend fun insertCategory(category: CategoryEntity) = 
         categoryDao.insert(category)
 
+    override suspend fun updateCategory(category: CategoryEntity) = 
+        categoryDao.update(category)
+
+    override suspend fun archiveCategory(id: Long) = 
+        categoryDao.archive(id)
+
     override suspend fun upsertBudget(budget: BudgetEntity) = 
         budgetDao.upsertBudget(budget)
 

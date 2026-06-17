@@ -15,6 +15,8 @@ interface FinanceRepository {
     fun getBudgetsWithSpend(monthYear: String): Flow<List<BudgetWithCategorySpend>>
     suspend fun insertTransaction(transaction: TransactionEntity): Long
     suspend fun insertCategory(category: CategoryEntity): Long
+    suspend fun updateCategory(category: CategoryEntity): Int
+    suspend fun archiveCategory(id: Long): Int
     suspend fun upsertBudget(budget: com.example.kwarta.data.local.BudgetEntity): Long
     suspend fun deleteBudget(categoryId: Long, monthYear: String): Int
 }
