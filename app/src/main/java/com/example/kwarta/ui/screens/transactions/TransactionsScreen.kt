@@ -15,6 +15,14 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import com.example.kwarta.data.local.CategoryEntity
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -38,7 +46,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TransactionsScreen(
     onTransactionClick: (Long) -> Unit,
@@ -305,48 +313,50 @@ fun TransactionsScreen(
                     fontWeight = FontWeight.SemiBold
                 )
 
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    val dateRanges = listOf(
-                        "ALL" to "All Time",
-                        "TODAY" to "Today",
-                        "WEEK" to "This Week",
-                        "MONTH" to "This Month"
-                    )
-                    dateRanges.forEach { (rangeVal, label) ->
-                        FilterChip(
-                            selected = selectedDateFilter == rangeVal,
-                            onClick = { viewModel.setSelectedDateFilter(rangeVal) },
-                            label = { Text(label) }
-                        )
-                    }
-
-                    // Specific Date Chip
-                    val dateChipLabel = if (selectedDateFilter == "CUSTOM_DATE" && customDate != null) {
+                val dateOptions = listOf(
+                    "ALL" to "All Time",
+                    "TODAY" to "Today",
+                    "WEEK" to "This Week",
+                    "MONTH" to "This Month",
+                    "CUSTOM_DATE" to (if (selectedDateFilter == "CUSTOM_DATE" && customDate != null) {
                         "Date: ${customDate!!.format(customDateFormatter)}"
                     } else {
                         "Choose Date..."
-                    }
-                    FilterChip(
-                        selected = selectedDateFilter == "CUSTOM_DATE",
-                        onClick = { showDatePicker = true },
-                        label = { Text(dateChipLabel) }
-                    )
-
-                    // Specific Month Chip
-                    val monthChipLabel = if (selectedDateFilter == "CUSTOM_MONTH" && customMonth != null) {
+                    }),
+                    "CUSTOM_MONTH" to (if (selectedDateFilter == "CUSTOM_MONTH" && customMonth != null) {
                         "Month: ${customMonth!!.format(customMonthFormatter)}"
                     } else {
                         "Choose Month..."
+                    })
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    dateOptions.forEachIndexed { index, (rangeVal, label) ->
+                        ToggleButton(
+                            checked = selectedDateFilter == rangeVal,
+                            onCheckedChange = { checked ->
+                                if (rangeVal == "CUSTOM_DATE") {
+                                    showDatePicker = true
+                                } else if (rangeVal == "CUSTOM_MONTH") {
+                                    showMonthPicker = true
+                                } else {
+                                    if (checked) viewModel.setSelectedDateFilter(rangeVal)
+                                }
+                            },
+                            shapes = when {
+                                dateOptions.size == 1 -> ToggleButtonDefaults.shapes()
+                                index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                index == dateOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            },
+                            modifier = Modifier.semantics { role = Role.RadioButton }
+                        ) {
+                            Text(label)
+                        }
                     }
-                    FilterChip(
-                        selected = selectedDateFilter == "CUSTOM_MONTH",
-                        onClick = { showMonthPicker = true },
-                        label = { Text(monthChipLabel) }
-                    )
                 }
 
                 Text(
@@ -355,16 +365,25 @@ fun TransactionsScreen(
                     fontWeight = FontWeight.SemiBold
                 )
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     val types = listOf("ALL" to "All Types", "INCOME" to "Income", "EXPENSE" to "Expense")
-                    types.forEach { (typeVal, label) ->
-                        FilterChip(
-                            selected = selectedType == typeVal,
-                            onClick = { viewModel.setSelectedTypeFilter(typeVal) },
-                            label = { Text(label) }
-                        )
+                    types.forEachIndexed { index, (typeVal, label) ->
+                        ToggleButton(
+                            checked = selectedType == typeVal,
+                            onCheckedChange = { if (it) viewModel.setSelectedTypeFilter(typeVal) },
+                            shapes = when (index) {
+                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                types.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            },
+                            modifier = Modifier.semantics { role = Role.RadioButton }
+                        ) {
+                            Text(label)
+                        }
                     }
                 }
 
@@ -374,36 +393,31 @@ fun TransactionsScreen(
                     fontWeight = FontWeight.SemiBold
                 )
 
+                val categoryOptions = listOf<CategoryEntity?>(null) + categories
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    FilterChip(
-                        selected = selectedCategoryId == null,
-                        onClick = { viewModel.setSelectedCategoryIdFilter(null) },
-                        label = { Text("All Categories") }
-                    )
-                    categories.forEach { category ->
-                        val catColor = try {
-                            Color(android.graphics.Color.parseColor(category.colorHex))
-                        } catch (e: Exception) {
-                            MaterialTheme.colorScheme.primary
-                        }
-                        FilterChip(
-                            selected = selectedCategoryId == category.id,
-                            onClick = {
-                                viewModel.setSelectedCategoryIdFilter(
-                                    if (selectedCategoryId == category.id) null else category.id
-                                )
+                    categoryOptions.forEachIndexed { index, category ->
+                        val isSelected = if (category == null) selectedCategoryId == null else selectedCategoryId == category.id
+                        ToggleButton(
+                            checked = isSelected,
+                            onCheckedChange = { checked ->
+                                if (checked) {
+                                    viewModel.setSelectedCategoryIdFilter(category?.id)
+                                }
                             },
-                            label = { Text(category.name) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = catColor.copy(alpha = 0.2f),
-                                selectedLabelColor = catColor,
-                                selectedLeadingIconColor = catColor
-                            )
-                        )
+                            shapes = when {
+                                categoryOptions.size == 1 -> ToggleButtonDefaults.shapes()
+                                index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                index == categoryOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            },
+                            modifier = Modifier.semantics { role = Role.RadioButton }
+                        ) {
+                            Text(category?.name ?: "All Categories")
+                        }
                     }
                 }
 
@@ -465,7 +479,7 @@ fun TransactionsScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MonthPickerDialog(
     initialMonth: java.time.Month,
@@ -487,33 +501,50 @@ fun MonthPickerDialog(
                 val years = (currentYear - 4..currentYear + 1).toList()
                 
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    years.forEach { year ->
-                        FilterChip(
-                            selected = selectedYear == year,
-                            onClick = { selectedYear = year },
-                            label = { Text(year.toString()) }
-                        )
+                    years.forEachIndexed { index, year ->
+                        ToggleButton(
+                            checked = selectedYear == year,
+                            onCheckedChange = { if (it) selectedYear = year },
+                            shapes = when {
+                                years.size == 1 -> ToggleButtonDefaults.shapes()
+                                index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                index == years.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            },
+                            modifier = Modifier.semantics { role = Role.RadioButton }
+                        ) {
+                            Text(year.toString())
+                        }
                     }
                 }
 
                 // Month Selection
                 Text("Select Month", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                val months = java.time.Month.values()
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    java.time.Month.values().forEach { month ->
+                    months.forEachIndexed { index, month ->
                         val monthLabel = month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-                        FilterChip(
-                            selected = selectedMonth == month,
-                            onClick = { selectedMonth = month },
-                            label = { Text(monthLabel) }
-                        )
+                        ToggleButton(
+                            checked = selectedMonth == month,
+                            onCheckedChange = { if (it) selectedMonth = month },
+                            shapes = when {
+                                months.size == 1 -> ToggleButtonDefaults.shapes()
+                                index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                index == months.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            },
+                            modifier = Modifier.semantics { role = Role.RadioButton }
+                        ) {
+                            Text(monthLabel)
+                        }
                     }
                 }
             }

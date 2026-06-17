@@ -15,6 +15,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,7 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.example.kwarta.data.local.TransactionEntity
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AddTransactionScreen(
     transactionType: String,
@@ -57,11 +66,22 @@ fun AddTransactionScreen(
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     val context = LocalContext.current
-
+ 
+    var showImageOptionDialog by remember { mutableStateOf(false) }
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+ 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         imageUri = uri
+    }
+ 
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        if (success) {
+            imageUri = tempCameraUri
+        }
     }
 
     LaunchedEffect(imageUri) {
@@ -128,15 +148,25 @@ fun AddTransactionScreen(
 
             Text("Category", style = MaterialTheme.typography.titleMedium)
             
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                items(filteredCategories) { category ->
-                    FilterChip(
-                        selected = selectedCategoryId == category.id,
-                        onClick = { selectedCategoryId = category.id },
-                        label = { Text(category.name) }
-                    )
+                filteredCategories.forEachIndexed { index, category ->
+                    ToggleButton(
+                        checked = selectedCategoryId == category.id,
+                        onCheckedChange = { if (it) selectedCategoryId = category.id },
+                        shapes = when {
+                            filteredCategories.size == 1 -> ToggleButtonDefaults.shapes()
+                            index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                            index == filteredCategories.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                        },
+                        modifier = Modifier.semantics { role = Role.RadioButton }
+                    ) {
+                        Text(category.name)
+                    }
                 }
             }
 
@@ -158,7 +188,7 @@ fun AddTransactionScreen(
                         color = borderColor,
                         cornerRadius = 16.dp
                     )
-                    .clickable { imagePickerLauncher.launch("image/*") },
+                    .clickable { showImageOptionDialog = true },
                 contentAlignment = Alignment.Center
             ) {
                 if (imageBitmap != null) {
@@ -227,6 +257,58 @@ fun AddTransactionScreen(
             ) {
                 Text("Save Transaction")
             }
+ 
+            if (showImageOptionDialog) {
+                AlertDialog(
+                    onDismissRequest = { showImageOptionDialog = false },
+                    title = { Text("Attach Receipt") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showImageOptionDialog = false
+                                        try {
+                                            val uri = getTempImageUri(context)
+                                            tempCameraUri = uri
+                                            cameraLauncher.launch(uri)
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.PhotoCamera, contentDescription = "Take Photo")
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text("Take Photo", style = MaterialTheme.typography.bodyLarge)
+                            }
+                            HorizontalDivider()
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showImageOptionDialog = false
+                                        imagePickerLauncher.launch("image/*")
+                                    }
+                                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.PhotoLibrary, contentDescription = "Choose from Gallery")
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text("Choose from Gallery", style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { showImageOptionDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
         }
     }
 }
@@ -262,5 +344,17 @@ fun Modifier.dashedBorder(
         color = color,
         style = stroke,
         cornerRadius = CornerRadius(cornerRadius.toPx())
+    )
+}
+ 
+fun getTempImageUri(context: android.content.Context): Uri {
+    val tempFile = java.io.File.createTempFile("receipt_capture_", ".jpg", context.cacheDir).apply {
+        createNewFile()
+        deleteOnExit()
+    }
+    return androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        tempFile
     )
 }

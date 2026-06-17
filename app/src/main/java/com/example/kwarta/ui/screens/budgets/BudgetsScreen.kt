@@ -18,6 +18,13 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.border
 import com.example.kwarta.data.local.CategoryEntity
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,7 +45,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BudgetsScreen(
     onRegisterFabClick: (() -> Unit) -> Unit,
@@ -247,15 +254,25 @@ fun BudgetsScreen(
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Select Category", style = MaterialTheme.typography.titleSmall)
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                items(categories) { category ->
-                                    FilterChip(
-                                        selected = selectedCategoryId == category.id,
-                                        onClick = { selectedCategoryId = category.id },
-                                        label = { Text(category.name) }
-                                    )
+                                categories.forEachIndexed { index, category ->
+                                    ToggleButton(
+                                        checked = selectedCategoryId == category.id,
+                                        onCheckedChange = { if (it) selectedCategoryId = category.id },
+                                        shapes = when {
+                                            categories.size == 1 -> ToggleButtonDefaults.shapes()
+                                            index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                            index == categories.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                        },
+                                        modifier = Modifier.semantics { role = Role.RadioButton }
+                                    ) {
+                                        Text(category.name)
+                                    }
                                 }
                             }
                         }
@@ -427,29 +444,49 @@ fun BudgetsScreen(
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Type", style = MaterialTheme.typography.titleSmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterChip(
-                                selected = categoryType == "EXPENSE",
-                                onClick = { categoryType = "EXPENSE" },
-                                label = { Text("Expense") }
-                            )
-                            FilterChip(
-                                selected = categoryType == "INCOME",
-                                onClick = { categoryType = "INCOME" },
-                                label = { Text("Income") }
-                            )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            ToggleButton(
+                                checked = categoryType == "EXPENSE",
+                                onCheckedChange = { if (it) categoryType = "EXPENSE" },
+                                shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                                modifier = Modifier.semantics { role = Role.RadioButton }
+                            ) {
+                                Text("Expense")
+                            }
+                            ToggleButton(
+                                checked = categoryType == "INCOME",
+                                onCheckedChange = { if (it) categoryType = "INCOME" },
+                                shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                                modifier = Modifier.semantics { role = Role.RadioButton }
+                            ) {
+                                Text("Income")
+                            }
                         }
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Priority", style = MaterialTheme.typography.titleSmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("NEED", "WANT", "SAVING").forEach { tag ->
-                                FilterChip(
-                                    selected = categoryPriority == tag,
-                                    onClick = { categoryPriority = tag },
-                                    label = { Text(tag) }
-                                )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            val tags = listOf("NEED", "WANT", "SAVING")
+                            tags.forEachIndexed { index, tag ->
+                                ToggleButton(
+                                    checked = categoryPriority == tag,
+                                    onCheckedChange = { if (it) categoryPriority = tag },
+                                    shapes = when (index) {
+                                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                        tags.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                    },
+                                    modifier = Modifier.semantics { role = Role.RadioButton }
+                                ) {
+                                    Text(tag)
+                                }
                             }
                         }
                     }
