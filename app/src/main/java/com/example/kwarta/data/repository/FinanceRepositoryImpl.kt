@@ -36,19 +36,8 @@ class FinanceRepositoryImpl(
                 CategoryEntity(name = "Transport", iconName = "DirectionsCar", colorHex = "#FFC107", transactionType = "EXPENSE", priorityTag = "NEED"),
                 CategoryEntity(name = "Entertainment", iconName = "Movie", colorHex = "#9C27B0", transactionType = "EXPENSE", priorityTag = "WANT")
             )
-            // Insert and capture the ID of the food category
-            val foodId = categoryDao.insert(foodCat)
-            defaultCategories.drop(1).forEach { categoryDao.insert(it) }
-
-            // Seed a default budget for the first month
-            val currentMonth = java.time.YearMonth.now().toString()
-            budgetDao.upsertBudget(
-                com.example.kwarta.data.local.BudgetEntity(
-                    categoryId = foodId,
-                    limitAmount = 5000.0,
-                    monthYear = currentMonth
-                )
-            )
+            // Insert default categories
+            defaultCategories.forEach { categoryDao.insert(it) }
         }
     }
 

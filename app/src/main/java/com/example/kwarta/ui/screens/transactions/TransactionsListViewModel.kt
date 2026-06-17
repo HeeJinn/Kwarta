@@ -97,8 +97,9 @@ class TransactionsListViewModel(
                 else -> true
             }
 
-            // Filter by search query (merchantName, note, or categoryName)
+            // Filter by search query (title, merchantName, note, or categoryName)
             val matchesQuery = if (query.isNotBlank()) {
+                item.transaction.title.contains(query, ignoreCase = true) ||
                 (item.transaction.merchantName?.contains(query, ignoreCase = true) == true) ||
                 (item.transaction.note?.contains(query, ignoreCase = true) == true) ||
                 (item.category?.name?.contains(query, ignoreCase = true) == true)
