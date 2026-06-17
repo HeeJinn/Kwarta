@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Kwarta</string>
+    <string name="shortcut_add_expense_short">Add Expense</string>
+    <string name="shortcut_add_expense_long">Record new expense</string>
+    <string name="shortcut_add_income_short">Add Income</string>
+    <string name="shortcut_add_income_long">Record new income</string>
+    <string name="tile_add_expense_label">Quick Expense</string>
 </resources>

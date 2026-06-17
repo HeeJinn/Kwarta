@@ -1,5 +1,6 @@
 package com.example.kwarta.data.repository
 
+import android.content.Context
 import com.example.kwarta.data.local.*
 import kotlinx.coroutines.flow.Flow
 
@@ -9,6 +10,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 class FinanceRepositoryImpl(
+    private val context: Context,
     private val transactionDao: TransactionDao,
     private val categoryDao: CategoryDao,
     private val budgetDao: BudgetDao
@@ -71,8 +73,11 @@ class FinanceRepositoryImpl(
     override fun getBudgetsWithSpend(monthYear: String): Flow<List<BudgetWithCategorySpend>> = 
         budgetDao.getBudgetsWithSpend(monthYear)
 
-    override suspend fun insertTransaction(transaction: TransactionEntity) = 
-        transactionDao.insert(transaction)
+    override suspend fun insertTransaction(transaction: TransactionEntity): Long {
+        val result = transactionDao.insert(transaction)
+        com.example.kwarta.widget.KwartaWidgetUpdater.update(context)
+        return result
+    }
 
     override suspend fun insertCategory(category: CategoryEntity) = 
         categoryDao.insert(category)

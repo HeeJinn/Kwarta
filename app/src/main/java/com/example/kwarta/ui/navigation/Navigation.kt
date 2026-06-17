@@ -88,8 +88,20 @@ val bottomNavItems = listOf(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun KwartaNavigation() {
+fun KwartaNavigation(
+    initialDestination: Destination? = null,
+    onDestinationConsumed: () -> Unit = {}
+) {
     val backStack = remember { mutableStateListOf<Any>(Destination.Dashboard) }
+
+    LaunchedEffect(initialDestination) {
+        if (initialDestination != null) {
+            backStack.clear()
+            backStack.add(Destination.Dashboard)
+            backStack.add(initialDestination)
+            onDestinationConsumed()
+        }
+    }
 
     val density = LocalDensity.current
     val scrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(exitDirection = Bottom)
