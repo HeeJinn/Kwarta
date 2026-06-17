@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -41,7 +42,7 @@ fun AddTransactionScreen(
     onBack: () -> Unit,
     viewModel: TransactionViewModel = koinViewModel()
 ) {
-    val categories by viewModel.categories.collectAsState()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
 
     val filteredCategories = remember(categories, transactionType) {
         categories.filter { it.transactionType == transactionType || it.transactionType == "BOTH" }

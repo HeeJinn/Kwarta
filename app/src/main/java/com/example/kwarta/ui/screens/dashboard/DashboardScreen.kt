@@ -1,7 +1,7 @@
 package com.example.kwarta.ui.screens.dashboard
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,14 +15,24 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -40,7 +50,7 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.ui.text.style.TextOverflow
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DashboardScreen(
     onAddTransaction: (String) -> Unit,
@@ -48,19 +58,27 @@ fun DashboardScreen(
     onConfigureBudgets: () -> Unit,
     onViewAllTransactions: () -> Unit,
     modifier: Modifier = Modifier,
-    bottomBarPadding: () -> Dp = { 0.dp },
     viewModel: DashboardViewModel = koinViewModel()
 ) {
-    val allTransactions by viewModel.allTransactions.collectAsState()
-    val recentTransactions by viewModel.recentTransactions.collectAsState()
-    val budgets by viewModel.budgetsWithSpend.collectAsState()
-
-    var isFabExpanded by remember { mutableStateOf(false) }
+    val allTransactions by viewModel.allTransactions.collectAsStateWithLifecycle()
+    val recentTransactions by viewModel.recentTransactions.collectAsStateWithLifecycle()
+    val budgets by viewModel.budgetsWithSpend.collectAsStateWithLifecycle()
 
     // Computations
     val totalIncome = allTransactions.filter { it.type == "INCOME" }.sumOf { it.amount }
     val totalExpense = allTransactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
     val totalBalance = totalIncome - totalExpense
+
+    var triggerAnimation by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        triggerAnimation = true
+    }
+    val progress by animateFloatAsState(
+        targetValue = if (triggerAnimation) 1f else 0f,
+        animationSpec = tween(durationMillis = 1500, easing = FastOutSlowInEasing),
+        label = "BalanceProgress"
+    )
+    val animatedBalance = totalBalance * progress
 
     val currencyFormatter = NumberFormat.getCurrencyInstance(Locale("en", "PH"))
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
@@ -81,73 +99,7 @@ fun DashboardScreen(
     // 3. Top Expense Category from Budget list
     val topBudgetExpense = budgets.filter { it.currentSpend > 0 }.maxByOrNull { it.currentSpend }
 
-    Scaffold(
-        floatingActionButton = {
-            AnimatedVisibility(
-                visible = bottomBarPadding() >= 76.dp,
-                enter = scaleIn() + fadeIn(),
-                exit = scaleOut() + fadeOut()
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(bottom = bottomBarPadding())
-                ) {
-                    AnimatedVisibility(
-                        visible = isFabExpanded,
-                        enter = fadeIn() + expandVertically() + slideInVertically(initialOffsetY = { it / 2 }),
-                        exit = fadeOut() + shrinkVertically() + slideOutVertically(targetOffsetY = { it / 2 })
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // Add Income Option
-                            ExtendedFloatingActionButton(
-                                onClick = {
-                                    isFabExpanded = false
-                                    onAddTransaction("INCOME")
-                                },
-                                icon = { Icon(Icons.Default.ArrowDownward, contentDescription = "Add Income") },
-                                text = { Text("Add Income") },
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-
-                            // Add Expense Option
-                            ExtendedFloatingActionButton(
-                                onClick = {
-                                    isFabExpanded = false
-                                    onAddTransaction("EXPENSE")
-                                },
-                                icon = { Icon(Icons.Default.ArrowUpward, contentDescription = "Add Expense") },
-                                text = { Text("Add Expense") },
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                    }
-
-                    // Main FAB
-                    FloatingActionButton(
-                        onClick = { isFabExpanded = !isFabExpanded },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ) {
-                        val rotationAngle by animateFloatAsState(
-                            targetValue = if (isFabExpanded) 45f else 0f,
-                            label = "FAB rotation"
-                        )
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Toggle Transaction Menu",
-                            modifier = Modifier.rotate(rotationAngle)
-                        )
-                    }
-                }
-            }
-        }
-    ) { paddingValues ->
+    Scaffold { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 modifier = Modifier
@@ -182,7 +134,7 @@ fun DashboardScreen(
                                         color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                                     )
                                     Text(
-                                        text = currencyFormatter.format(totalBalance),
+                                        text = currencyFormatter.format(animatedBalance),
                                         style = MaterialTheme.typography.displayMedium,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -387,19 +339,6 @@ fun DashboardScreen(
             }
         }
 
-        if (isFabExpanded) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.32f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        isFabExpanded = false
-                    }
-            )
         }
     }
-}
 }

@@ -16,7 +16,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import org.koin.androidx.compose.koinViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -41,16 +42,17 @@ import java.util.Locale
 @Composable
 fun TransactionsScreen(
     onTransactionClick: (Long) -> Unit,
+    parentScrollConnection: NestedScrollConnection? = null,
     viewModel: TransactionsListViewModel = koinViewModel()
 ) {
-    val transactions by viewModel.transactions.collectAsState()
-    val categories by viewModel.categories.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val selectedType by viewModel.selectedTypeFilter.collectAsState()
-    val selectedCategoryId by viewModel.selectedCategoryIdFilter.collectAsState()
-    val selectedDateFilter by viewModel.selectedDateFilter.collectAsState()
-    val customDate by viewModel.customDate.collectAsState()
-    val customMonth by viewModel.customMonth.collectAsState()
+    val transactions by viewModel.transactions.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val selectedType by viewModel.selectedTypeFilter.collectAsStateWithLifecycle()
+    val selectedCategoryId by viewModel.selectedCategoryIdFilter.collectAsStateWithLifecycle()
+    val selectedDateFilter by viewModel.selectedDateFilter.collectAsStateWithLifecycle()
+    val customDate by viewModel.customDate.collectAsStateWithLifecycle()
+    val customMonth by viewModel.customMonth.collectAsStateWithLifecycle()
 
     var isSearchActive by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -78,7 +80,15 @@ fun TransactionsScreen(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .then(
+                if (parentScrollConnection != null) {
+                    Modifier.nestedScroll(parentScrollConnection)
+                } else {
+                    Modifier
+                }
+            ),
         topBar = {
             if (isSearchActive) {
                 TopAppBar(

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import org.koin.androidx.compose.koinViewModel
 import java.text.NumberFormat
 import java.util.Locale
@@ -34,11 +36,12 @@ import androidx.compose.ui.draw.clip
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun BudgetsScreen(
-    bottomBarPadding: () -> Dp = { 0.dp },
+    onRegisterFabClick: (() -> Unit) -> Unit,
+    parentScrollConnection: NestedScrollConnection? = null,
     viewModel: BudgetsViewModel = koinViewModel()
 ) {
-    val budgets by viewModel.budgetsWithSpend.collectAsState()
-    val categories by viewModel.categories.collectAsState()
+    val budgets by viewModel.budgetsWithSpend.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
     val currencyFormatter = NumberFormat.getCurrencyInstance(Locale("en", "PH"))
 
     var showDialog by remember { mutableStateOf(false) }
@@ -46,34 +49,37 @@ fun BudgetsScreen(
     var limitAmount by remember { mutableStateOf("") }
     var isEditing by remember { mutableStateOf(false) }
 
+    val onSetBudgetClick = {
+        isEditing = false
+        selectedCategoryId = categories.firstOrNull()?.id
+        limitAmount = ""
+        showDialog = true
+    }
+
+    DisposableEffect(categories) {
+        onRegisterFabClick(onSetBudgetClick)
+        onDispose {
+            onRegisterFabClick {}
+        }
+    }
+
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .then(
+                if (parentScrollConnection != null) {
+                    Modifier.nestedScroll(parentScrollConnection)
+                } else {
+                    Modifier
+                }
+            ),
         topBar = {
             CenterAlignedTopAppBar(
                 scrollBehavior = scrollBehavior,
                 title = { Text("Monthly Budgets") }
             )
-        },
-        floatingActionButton = {
-            AnimatedVisibility(
-                visible = bottomBarPadding() >= 76.dp,
-                enter = scaleIn() + fadeIn(),
-                exit = scaleOut() + fadeOut()
-            ) {
-                FloatingActionButton(
-                    modifier = Modifier.padding(bottom = bottomBarPadding()),
-                    onClick = {
-                        isEditing = false
-                        selectedCategoryId = categories.firstOrNull()?.id
-                        limitAmount = ""
-                        showDialog = true
-                    }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Set Budget")
-                }
-            }
         }
     ) { paddingValues ->
         if (budgets.isEmpty()) {
