@@ -37,7 +37,16 @@
 - **Direct Receipt Camera Capture**: When attaching a receipt, choose to take a photo directly using the device camera (using a secure local `FileProvider` and `TakePicture` contract) or pick an existing image from the gallery.
 - **Image Persistence**: Receipt attachments are securely copied to internal app storage.
 
+### 5. Settings, Personalization & Data Controls
+- **Flexible Theme Engine**: Toggle between System Default, Light, and Dark modes.
+- **Premium Color Palettes**: Customize the app appearance with 5 custom Material 3 color schemes (Purple, Blue, Green, Orange, Monochrome Black) or Android 12+ wallpaper-synced Dynamic Material You.
+- **Dashboard Layout Preferences**: Toggle the Daily Safe-to-Spend Dial widget on or off. When disabled, the Primary Budget Limit card automatically spans the full screen width on both phones and tablets.
+- **Notifications Switches**: Choose to schedule or cancel Daily Reminders and enable/disable critical budget alerts.
+- **Data Reconciliation**: Reconcile actual balance discrepancies or reset the manual offset adjustment to revert strictly to computed values.
+- **Secure Data Wipe**: Double-confirmation factory reset in the Danger Zone to erase all custom data safely and restore defaults.
+
 ---
+
 
 ## 🛠️ Technology Stack
 
