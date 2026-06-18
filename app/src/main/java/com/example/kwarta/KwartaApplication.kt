@@ -11,6 +11,8 @@ class KwartaApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         
+        com.example.kwarta.notification.NotificationHelper.createNotificationChannels(this)
+        
         startKoin {
             androidContext(this@KwartaApplication)
             modules(listOf(dataModule, repositoryModule, viewModelModule))

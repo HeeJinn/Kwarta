@@ -16,6 +16,8 @@ class FinanceRepositoryImpl(
     private val budgetDao: BudgetDao
 ) : FinanceRepository {
     
+    private val prefs = context.getSharedPreferences("kwarta_prefs", Context.MODE_PRIVATE)
+    
     init {
         CoroutineScope(Dispatchers.IO).launch {
             seedDatabase()
@@ -62,9 +64,53 @@ class FinanceRepositoryImpl(
     override fun getBudgetsWithSpend(monthYear: String): Flow<List<BudgetWithCategorySpend>> = 
         budgetDao.getBudgetsWithSpend(monthYear)
 
+    override suspend fun getBudgetWithSpendSync(categoryId: Long, monthYear: String): BudgetWithCategorySpend? = 
+        budgetDao.getBudgetWithSpendSync(categoryId, monthYear)
+
     override suspend fun insertTransaction(transaction: TransactionEntity): Long {
         val result = transactionDao.insert(transaction)
         com.example.kwarta.widget.KwartaWidgetUpdater.update(context)
+        
+        if (transaction.type == "EXPENSE") {
+            try {
+                val txLocalDate = java.time.Instant.ofEpochMilli(transaction.date)
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDate()
+                val monthYear = java.time.YearMonth.from(txLocalDate).toString()
+                val budget = budgetDao.getBudgetWithSpendSync(transaction.categoryId, monthYear)
+                if (budget != null) {
+                    val limit = budget.limitAmount
+                    val currentSpend = budget.currentSpend
+                    val previousSpend = currentSpend - transaction.amount
+                    
+                    val currentPercent = if (limit > 0) ((currentSpend / limit) * 100).toInt() else 0
+                    val previousPercent = if (limit > 0) ((previousSpend / limit) * 100).toInt() else 0
+                    
+                    if (previousPercent < 80 && currentPercent >= 80 && currentPercent < 100) {
+                        com.example.kwarta.notification.NotificationHelper.showBudgetAlert(
+                            context = context,
+                            categoryId = transaction.categoryId,
+                            categoryName = budget.categoryName,
+                            percentage = currentPercent,
+                            limit = limit,
+                            currentSpend = currentSpend
+                        )
+                    } else if (previousPercent < 100 && currentPercent >= 100) {
+                        com.example.kwarta.notification.NotificationHelper.showBudgetAlert(
+                            context = context,
+                            categoryId = transaction.categoryId,
+                            categoryName = budget.categoryName,
+                            percentage = currentPercent,
+                            limit = limit,
+                            currentSpend = currentSpend
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        
         return result
     }
 
@@ -82,5 +128,13 @@ class FinanceRepositoryImpl(
 
     override suspend fun deleteBudget(categoryId: Long, monthYear: String): Int {
         return budgetDao.deleteBudget(categoryId, monthYear)
+    }
+
+    override suspend fun getInitialBalanceOffset(): Double {
+        return prefs.getString("initial_balance_offset", "0.0")?.toDoubleOrNull() ?: 0.0
+    }
+
+    override suspend fun setInitialBalanceOffset(offset: Double) {
+        prefs.edit().putString("initial_balance_offset", offset.toString()).apply()
     }
 }

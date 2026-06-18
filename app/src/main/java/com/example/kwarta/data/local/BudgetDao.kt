@@ -38,4 +38,20 @@ interface BudgetDao {
         GROUP BY b.categoryId
     """)
     fun getBudgetsWithSpend(monthYear: String): Flow<List<BudgetWithCategorySpend>>
+
+    @Query("""
+        SELECT 
+            b.categoryId as categoryId, 
+            c.name as categoryName, 
+            b.limitAmount as limitAmount, 
+            COALESCE(SUM(t.amount), 0.0) as currentSpend,
+            c.colorHex as colorHex
+        FROM budgets b
+        JOIN categories c ON b.categoryId = c.id
+        LEFT JOIN transactions t ON b.categoryId = t.categoryId 
+            AND strftime('%Y-%m', t.date / 1000, 'unixepoch') = b.monthYear
+        WHERE b.monthYear = :monthYear AND b.categoryId = :categoryId
+        GROUP BY b.categoryId
+    """)
+    suspend fun getBudgetWithSpendSync(categoryId: Long, monthYear: String): BudgetWithCategorySpend?
 }

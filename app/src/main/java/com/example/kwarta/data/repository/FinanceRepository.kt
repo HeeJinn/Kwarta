@@ -13,6 +13,9 @@ interface FinanceRepository {
     fun getAllActiveCategories(): Flow<List<CategoryEntity>>
     suspend fun getCategoryById(id: Long): CategoryEntity?
     fun getBudgetsWithSpend(monthYear: String): Flow<List<BudgetWithCategorySpend>>
+    suspend fun getBudgetWithSpendSync(categoryId: Long, monthYear: String): BudgetWithCategorySpend?
+    suspend fun getInitialBalanceOffset(): Double
+    suspend fun setInitialBalanceOffset(offset: Double)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
     suspend fun insertCategory(category: CategoryEntity): Long
     suspend fun updateCategory(category: CategoryEntity): Int

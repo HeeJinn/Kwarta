@@ -220,7 +220,7 @@ fun KwartaNavigation(
                                 )
                             } else {
                                 Modifier
-                            }).offset(y = 12.dp),
+                            }).offset(y = 14.dp),
                             expanded = isFabExpanded,
                             button = {
                                 TooltipBox(

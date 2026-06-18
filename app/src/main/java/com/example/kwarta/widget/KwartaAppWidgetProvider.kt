@@ -33,7 +33,8 @@ class KwartaAppWidgetProvider : AppWidgetProvider(), KoinComponent {
             val allTx = repository.getAllTransactions().firstOrNull() ?: emptyList()
             val totalIncome = allTx.filter { it.type == "INCOME" }.sumOf { it.amount }
             val totalExpense = allTx.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-            val totalBalance = totalIncome - totalExpense
+            val offset = repository.getInitialBalanceOffset()
+            val totalBalance = totalIncome - totalExpense + offset
 
             val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-PH"))
             val formattedBalance = currencyFormatter.format(totalBalance)
