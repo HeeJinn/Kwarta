@@ -1,4 +1,4 @@
-# Kwarta - Personal Finance & Budgeting App
+  # Kwarta - Personal Finance & Budgeting App
 
 **Kwarta** is a modern, premium, offline-first personal finance and budgeting Android application. Built with **Kotlin**, **Jetpack Compose (Material 3 Expressive Design)**, **Room Database**, and **Koin**, Kwarta offers a sleek, intuitive, responsive, and gorgeous experience for managing your income, tracking expenses, and planning monthly budgets.
 

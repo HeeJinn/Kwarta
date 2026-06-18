@@ -22,6 +22,8 @@ interface FinanceRepository {
     suspend fun setThemeColor(color: String)
     fun getShowSafeToSpend(): Flow<Boolean>
     suspend fun setShowSafeToSpend(show: Boolean)
+    fun isOnboardingCompleted(): Flow<Boolean>
+    suspend fun setOnboardingCompleted(completed: Boolean)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
     suspend fun insertCategory(category: CategoryEntity): Long
     suspend fun updateCategory(category: CategoryEntity): Int

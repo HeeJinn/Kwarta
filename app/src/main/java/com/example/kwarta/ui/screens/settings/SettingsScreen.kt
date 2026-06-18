@@ -186,6 +186,15 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.SpaceAround
                             ) {
                                 ColorPaletteDot(
+                                    colorName = "Brand",
+                                    color = Color.Transparent,
+                                    isSelected = themeColor == "BRAND",
+                                    onClick = { viewModel.setThemeColor("BRAND") },
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(Color(0xFFAB47BC), Color(0xFFF4511E))
+                                    )
+                                )
+                                ColorPaletteDot(
                                     colorName = "Purple",
                                     color = Color(0xFF6650a4),
                                     isSelected = themeColor == "PURPLE",
@@ -451,6 +460,49 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            // App Version & Feedback
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Kwarta v1.0.0",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "For feedback, bug reports, and feature suggestions, contact the developer at:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    Text(
+                        text = "knribnitez@gmail.com",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                    data = android.net.Uri.parse("mailto:knribnitez@gmail.com")
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Kwarta v1.0.0 Feedback")
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // Fallback
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
 
@@ -519,7 +571,8 @@ fun ColorPaletteDot(
     color: Color,
     isSelected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    brush: Brush? = null
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -539,7 +592,13 @@ fun ColorPaletteDot(
                     shape = CircleShape
                 )
                 .padding(4.dp)
-                .background(color, shape = CircleShape),
+                .then(
+                    if (brush != null) {
+                        Modifier.background(brush, shape = CircleShape)
+                    } else {
+                        Modifier.background(color, shape = CircleShape)
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
             if (isSelected) {

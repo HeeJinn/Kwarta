@@ -63,10 +63,14 @@ import com.example.kwarta.ui.screens.budgets.BudgetsScreen
 import com.example.kwarta.ui.screens.dashboard.DashboardScreen
 import com.example.kwarta.ui.screens.transactions.AddTransactionScreen
 import com.example.kwarta.ui.screens.transactions.TransactionsScreen
+import androidx.compose.runtime.collectAsState
+import org.koin.compose.koinInject
+import com.example.kwarta.ui.screens.onboarding.OnboardingScreen
 
 
 
 sealed interface Destination {
+    data object Onboarding : Destination
     data object Dashboard : Destination
     data object Transactions : Destination
     data object Budgets : Destination
@@ -94,10 +98,31 @@ fun KwartaNavigation(
     initialDestination: Destination? = null,
     onDestinationConsumed: () -> Unit = {}
 ) {
-    val backStack = remember { mutableStateListOf<Any>(Destination.Dashboard) }
+    val repository: com.example.kwarta.data.repository.FinanceRepository = koinInject()
+    val onboardingCompleted by repository.isOnboardingCompleted().collectAsState(initial = true)
+
+    val backStack = remember { 
+        mutableStateListOf<Any>(
+            if (onboardingCompleted) Destination.Dashboard else Destination.Onboarding
+        ) 
+    }
+
+    LaunchedEffect(onboardingCompleted) {
+        if (!onboardingCompleted) {
+            if (backStack.firstOrNull() != Destination.Onboarding) {
+                backStack.clear()
+                backStack.add(Destination.Onboarding)
+            }
+        } else {
+            if (backStack.firstOrNull() == Destination.Onboarding) {
+                backStack.clear()
+                backStack.add(Destination.Dashboard)
+            }
+        }
+    }
 
     LaunchedEffect(initialDestination) {
-        if (initialDestination != null) {
+        if (initialDestination != null && onboardingCompleted) {
             backStack.clear()
             backStack.add(Destination.Dashboard)
             backStack.add(initialDestination)
@@ -200,6 +225,14 @@ fun KwartaNavigation(
                             is Destination.Settings -> NavEntry(key) {
                                 com.example.kwarta.ui.screens.settings.SettingsScreen(
                                     onBack = { backStack.removeLastOrNull() }
+                                )
+                            }
+                            is Destination.Onboarding -> NavEntry(key) {
+                                OnboardingScreen(
+                                    onComplete = {
+                                        backStack.clear()
+                                        backStack.add(Destination.Dashboard)
+                                    }
                                 )
                             }
                             else -> NavEntry(Unit) { /* Handle unknown */ }

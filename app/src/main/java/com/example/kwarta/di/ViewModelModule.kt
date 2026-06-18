@@ -12,4 +12,5 @@ val viewModelModule = module {
     viewModel { com.example.kwarta.ui.screens.budgets.BudgetsViewModel(get()) }
     viewModel { com.example.kwarta.ui.screens.transactions.TransactionDetailViewModel(get()) }
     viewModel { com.example.kwarta.ui.screens.settings.SettingsViewModel(get(), get()) }
+    viewModel { com.example.kwarta.ui.screens.onboarding.OnboardingViewModel(get(), get()) }
 }

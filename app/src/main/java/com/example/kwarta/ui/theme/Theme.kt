@@ -242,6 +242,52 @@ private val LightMonoColorScheme = lightColorScheme(
     outlineVariant = Color(0xFFE2E2E2)
 )
 
+private val DarkBrandColorScheme = darkColorScheme(
+    primary = Color(0xFFD39DFF), // Light purple
+    onPrimary = Color(0xFF4A0072),
+    primaryContainer = Color(0xFF7B1FA2),
+    onPrimaryContainer = Color(0xFFF3E5F5),
+    secondary = Color(0xFFFFAB91), // Warm light orange/coral
+    onSecondary = Color(0xFF5D1000),
+    secondaryContainer = Color(0xFFD84315),
+    onSecondaryContainer = Color(0xFFFFE0B2),
+    tertiary = Color(0xFFFFB74D), // Light warm orange
+    onTertiary = Color(0xFF4E2600),
+    tertiaryContainer = Color(0xFFE65100),
+    onTertiaryContainer = Color(0xFFFFE0B2),
+    background = Color(0xFF16121E), // Deep dark purple tint
+    onBackground = Color(0xFFEDE7F6),
+    surface = Color(0xFF16121E),
+    onSurface = Color(0xFFEDE7F6),
+    surfaceVariant = Color(0xFF4A3E54),
+    onSurfaceVariant = Color(0xFFD1C4E9),
+    outline = Color(0xFF9E8DA8),
+    outlineVariant = Color(0xFF4A3E54)
+)
+
+private val LightBrandColorScheme = lightColorScheme(
+    primary = Color(0xFF8E24AA), // Deep rich purple
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFF3E5F5),
+    onPrimaryContainer = Color(0xFF32004B),
+    secondary = Color(0xFFE64A19), // Rich orange-red
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFFFE0B2),
+    onSecondaryContainer = Color(0xFF4E0D00),
+    tertiary = Color(0xFFF57C00), // Vibrant orange
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFFFE0B2),
+    onTertiaryContainer = Color(0xFF2E0E00),
+    background = Color(0xFFFCF8FF),
+    onBackground = Color(0xFF1C0D26),
+    surface = Color(0xFFFCF8FF),
+    onSurface = Color(0xFF1C0D26),
+    surfaceVariant = Color(0xFFF3E8FF),
+    onSurfaceVariant = Color(0xFF7A6B8A),
+    outline = Color(0xFF8A7A9E),
+    outlineVariant = Color(0xFFE8DBFA)
+)
+
 @Composable
 fun KwartaTheme(
     themeMode: String = "SYSTEM",
@@ -255,6 +301,7 @@ fun KwartaTheme(
     }
 
     val colorScheme = when (themeColor) {
+        "BRAND" -> if (darkTheme) DarkBrandColorScheme else LightBrandColorScheme
         "BLUE" -> if (darkTheme) DarkBlueColorScheme else LightBlueColorScheme
         "GREEN" -> if (darkTheme) DarkGreenColorScheme else LightGreenColorScheme
         "ORANGE" -> if (darkTheme) DarkOrangeColorScheme else LightOrangeColorScheme

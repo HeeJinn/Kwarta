@@ -191,11 +191,29 @@ class FinanceRepositoryImpl(
         prefs.edit().putBoolean("show_safe_to_spend", show).apply()
     }
 
+    override fun isOnboardingCompleted(): Flow<Boolean> = callbackFlow {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "onboarding_completed") {
+                trySend(prefs.getBoolean("onboarding_completed", false))
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        send(prefs.getBoolean("onboarding_completed", false))
+        awaitClose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
+    override suspend fun setOnboardingCompleted(completed: Boolean) {
+        prefs.edit().putBoolean("onboarding_completed", completed).apply()
+    }
+
     override suspend fun clearAllData() {
         transactionDao.deleteAll()
         budgetDao.deleteAll()
         categoryDao.deleteAll()
         seedDatabase()
         setInitialBalanceOffset(0.0)
+        setOnboardingCompleted(false)
     }
 }
