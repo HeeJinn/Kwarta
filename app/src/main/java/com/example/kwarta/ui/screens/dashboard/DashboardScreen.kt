@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import com.example.kwarta.ui.components.ExpressiveBudgetRing
+import com.example.kwarta.ui.components.SafeToSpendDial
+import java.time.ZoneId
 import org.koin.androidx.compose.koinViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -87,16 +89,28 @@ fun DashboardScreen(
     )
     val animatedBalance = totalBalance * progress
 
-    val currencyFormatter = NumberFormat.getCurrencyInstance(Locale("en", "PH"))
+    val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-PH"))
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
-    // 1. Daily Spend Limit Calculation
+    // 1. Daily Spend Limit Calculation (Safe-to-Spend)
     val currentYearMonth = YearMonth.now()
+    val today = LocalDate.now()
+    val todayStartEpoch = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    val todayEndEpoch = today.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    val startOfMonthEpoch = currentYearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+    val expensesThisMonth = allTransactions.filter {
+        it.type == "EXPENSE" && it.date >= startOfMonthEpoch
+    }
+    val spentBeforeToday = expensesThisMonth.filter { it.date < todayStartEpoch }.sumOf { it.amount }
+    val spentToday = expensesThisMonth.filter { it.date >= todayStartEpoch && it.date < todayEndEpoch }.sumOf { it.amount }
+
     val totalBudgetLimit = budgets.sumOf { it.limitAmount }
-    val totalBudgetSpend = budgets.sumOf { it.currentSpend }
-    val remainingBudget = (totalBudgetLimit - totalBudgetSpend).coerceAtLeast(0.0)
-    val daysRemaining = (currentYearMonth.lengthOfMonth() - LocalDate.now().dayOfMonth + 1).coerceAtLeast(1)
-    val dailyLimit = remainingBudget / daysRemaining
+    val daysRemaining = (currentYearMonth.lengthOfMonth() - today.dayOfMonth + 1).coerceAtLeast(1)
+
+    val remainingBudgetForAllowance = (totalBudgetLimit - spentBeforeToday).coerceAtLeast(0.0)
+    val dailyLimit = if (totalBudgetLimit > 0.0) remainingBudgetForAllowance / daysRemaining else 0.0
+    val safeToSpendToday = if (totalBudgetLimit > 0.0) dailyLimit - spentToday else 0.0
 
     // 2. Savings Rate Calculation
     val savingsRate = if (totalIncome > 0) {
@@ -204,6 +218,14 @@ fun DashboardScreen(
                     }
                 }
 
+                item {
+                    SafeToSpendDial(
+                        safeToSpend = safeToSpendToday,
+                        dailyLimit = dailyLimit,
+                        spentToday = spentToday,
+                        onSetBudgetClick = onConfigureBudgets
+                    )
+                }
 
             // Primary Budget Ring
             item {

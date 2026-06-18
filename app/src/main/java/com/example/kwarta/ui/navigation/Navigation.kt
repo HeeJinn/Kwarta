@@ -70,6 +70,7 @@ sealed interface Destination {
     data object Dashboard : Destination
     data object Transactions : Destination
     data object Budgets : Destination
+    data object OfflineSync : Destination
     data class AddTransaction(val type: String) : Destination
     data class TransactionDetail(val transactionId: Long) : Destination
 }
@@ -167,7 +168,13 @@ fun KwartaNavigation(
                             is Destination.Transactions -> NavEntry(key) {
                                 TransactionsScreen(
                                     onTransactionClick = { id -> backStack.add(Destination.TransactionDetail(id)) },
+                                    onSyncClick = { backStack.add(Destination.OfflineSync) },
                                     parentScrollConnection = scrollBehavior
+                                )
+                            }
+                            is Destination.OfflineSync -> NavEntry(key) {
+                                com.example.kwarta.ui.screens.transactions.OfflineSyncScreen(
+                                    onBack = { backStack.removeLastOrNull() }
                                 )
                             }
                             is Destination.Budgets -> NavEntry(key) {

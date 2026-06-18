@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ButtonGroupDefaults
@@ -50,6 +51,7 @@ import java.util.Locale
 @Composable
 fun TransactionsScreen(
     onTransactionClick: (Long) -> Unit,
+    onSyncClick: () -> Unit,
     parentScrollConnection: NestedScrollConnection? = null,
     viewModel: TransactionsListViewModel = koinViewModel()
 ) {
@@ -138,6 +140,9 @@ fun TransactionsScreen(
                     scrollBehavior = scrollBehavior,
                     title = { Text("All Transactions") },
                     actions = {
+                        IconButton(onClick = onSyncClick) {
+                            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = "Sync Transactions")
+                        }
                         IconButton(onClick = { isSearchActive = true }) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
                         }

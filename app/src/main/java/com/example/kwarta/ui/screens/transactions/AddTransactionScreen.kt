@@ -3,11 +3,18 @@ package com.example.kwarta.ui.screens.transactions
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.example.kwarta.utils.ReceiptParser
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -84,6 +91,8 @@ fun AddTransactionScreen(
         }
     }
 
+    var isAnalyzingReceipt by remember { mutableStateOf(false) }
+
     LaunchedEffect(imageUri) {
         imageUri?.let { uri ->
             try {
@@ -95,6 +104,48 @@ fun AddTransactionScreen(
                     android.provider.MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
                 }
                 imageBitmap = bitmap.asImageBitmap()
+
+                // Run text recognition
+                isAnalyzingReceipt = true
+                val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                val inputImage = InputImage.fromBitmap(bitmap, 0)
+                recognizer.process(inputImage)
+                    .addOnSuccessListener { visionText ->
+                        isAnalyzingReceipt = false
+                        val details = ReceiptParser.parseReceiptText(visionText.text)
+                        
+                        val merchantFilled = !details.merchantName.isNullOrBlank()
+                        val amountFilled = details.totalAmount != null && details.totalAmount > 0.0
+
+                        var autofilledTitle = false
+                        var autofilledAmount = false
+
+                        if (merchantFilled && title.isBlank()) {
+                            title = details.merchantName!!
+                            autofilledTitle = true
+                        }
+                        if (amountFilled && amount.isBlank()) {
+                            amount = details.totalAmount.toString()
+                            autofilledAmount = true
+                        }
+
+                        if (merchantFilled || amountFilled) {
+                            val msg = buildString {
+                                if (autofilledTitle || autofilledAmount) {
+                                    append("Receipt parsed successfully!")
+                                    if (autofilledTitle) append(" Merchant: ${details.merchantName}")
+                                    if (autofilledAmount) append(", Amount: ₱${details.totalAmount}")
+                                } else {
+                                    append("Receipt parsed, but manual fields were kept. Clear fields to autofill.")
+                                }
+                            }
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        isAnalyzingReceipt = false
+                        Toast.makeText(context, "Failed to analyze receipt: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -188,7 +239,7 @@ fun AddTransactionScreen(
                         color = borderColor,
                         cornerRadius = 16.dp
                     )
-                    .clickable { showImageOptionDialog = true },
+                    .clickable(enabled = !isAnalyzingReceipt) { showImageOptionDialog = true },
                 contentAlignment = Alignment.Center
             ) {
                 if (imageBitmap != null) {
@@ -201,6 +252,7 @@ fun AddTransactionScreen(
                         )
                         IconButton(
                             onClick = { imageUri = null },
+                            enabled = !isAnalyzingReceipt,
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(8.dp),
@@ -224,6 +276,33 @@ fun AddTransactionScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
+                    }
+                }
+
+                // OCR analysis overlay
+                if (isAnalyzingReceipt) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.6f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp),
+                                strokeWidth = 3.dp
+                            )
+                            Text(
+                                text = "Analyzing receipt details...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
