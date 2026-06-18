@@ -3,6 +3,8 @@ package com.example.kwarta.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +16,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -126,19 +131,22 @@ fun SafeToSpendDial(
                 }
             } else {
                 // Active Safe-to-Spend state
-                val percentage = if (safeToSpend > 0.0) {
-                    (safeToSpend / dailyLimit).toFloat().coerceIn(0f, 1f)
-                } else {
-                    0f
+                var triggerAnimation by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    triggerAnimation = true
                 }
 
-                // Animate progress arc
-                val animatedPercentage = remember { Animatable(0f) }
-                LaunchedEffect(percentage) {
-                    animatedPercentage.animateTo(
-                        targetValue = percentage,
-                        animationSpec = tween(durationMillis = 1000)
-                    )
+                val animatedSafeToSpendFloat by animateFloatAsState(
+                    targetValue = if (triggerAnimation) safeToSpend.toFloat() else 0f,
+                    animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+                    label = "SafeToSpendProgress"
+                )
+                val animatedSafeToSpend = animatedSafeToSpendFloat.toDouble()
+
+                val animatedPercentage = if (dailyLimit > 0.0) {
+                    (animatedSafeToSpend / dailyLimit).toFloat().coerceIn(0f, 1f)
+                } else {
+                    0f
                 }
 
                 // Determine dynamic gradient colors
@@ -148,7 +156,7 @@ fun SafeToSpendDial(
                     else -> listOf(Color(0xFF00C9FF), Color(0xFF00E676))
                 }
 
-                val safeToSpendText = currencyFormatter.format(safeToSpend)
+                val safeToSpendText = currencyFormatter.format(animatedSafeToSpend)
                 val fontSize = when {
                     safeToSpendText.length >= 14 -> 18.sp
                     safeToSpendText.length >= 11 -> 22.sp
@@ -167,7 +175,7 @@ fun SafeToSpendDial(
                         val radius = (size.minDimension - strokePx) / 2f
                         val startAngle = 150f
                         val sweepAngleTrack = 240f
-                        val sweepAngleActive = sweepAngleTrack * animatedPercentage.value
+                        val sweepAngleActive = sweepAngleTrack * animatedPercentage
 
                         // Background track
                         drawArc(
@@ -230,7 +238,7 @@ fun SafeToSpendDial(
                             text = safeToSpendText,
                             fontSize = fontSize,
                             fontWeight = FontWeight.Bold,
-                            color = if (safeToSpend < 0.0) Color(0xFFFF1744) else MaterialTheme.colorScheme.onSurface,
+                            color = if (animatedSafeToSpend < 0.0) Color(0xFFFF1744) else MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )

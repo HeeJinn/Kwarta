@@ -22,15 +22,18 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -62,6 +65,7 @@ fun DashboardScreen(
     onTransactionClick: (Long) -> Unit,
     onConfigureBudgets: () -> Unit,
     onViewAllTransactions: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = koinViewModel()
 ) {
@@ -69,8 +73,11 @@ fun DashboardScreen(
     val recentTransactions by viewModel.recentTransactions.collectAsStateWithLifecycle()
     val budgets by viewModel.budgetsWithSpend.collectAsStateWithLifecycle()
     val balanceOffset by viewModel.balanceOffset.collectAsStateWithLifecycle(0.0)
+    val showSafeToSpend by viewModel.showSafeToSpend.collectAsStateWithLifecycle(initialValue = true)
 
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isTablet = configuration.screenWidthDp >= 600
     var showBalanceSheet by remember { mutableStateOf(false) }
 
     // Computations
@@ -120,7 +127,50 @@ fun DashboardScreen(
     // 3. Top Expense Category from Budget list
     val topBudgetExpense = budgets.filter { it.currentSpend > 0 }.maxByOrNull { it.currentSpend }
 
-    Scaffold { paddingValues ->
+    val greeting = remember {
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        when (hour) {
+            in 5..11 -> "Good morning"
+            in 12..16 -> "Good afternoon"
+            in 17..20 -> "Good evening"
+            else -> "Good night"
+        }
+    }
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = greeting,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Welcome back to Kwarta",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
+                scrollBehavior = scrollBehavior
+            )
+        }
+    ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 modifier = Modifier
@@ -218,82 +268,51 @@ fun DashboardScreen(
                     }
                 }
 
-                item {
-                    SafeToSpendDial(
-                        safeToSpend = safeToSpendToday,
-                        dailyLimit = dailyLimit,
-                        spentToday = spentToday,
-                        onSetBudgetClick = onConfigureBudgets
-                    )
-                }
-
-            // Primary Budget Ring
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            text = "Primary Budget Limit",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.align(Alignment.Start)
-                        )
-                        
-                        val topBudget = budgets.firstOrNull()
-                        val budgetPercentage = if (topBudget != null && topBudget.limitAmount > 0) {
-                            (topBudget.currentSpend / topBudget.limitAmount).toFloat().coerceIn(0f, 1f)
-                        } else {
-                            0f
-                        }
-
-                        ExpressiveBudgetRing(
-                            percentage = budgetPercentage,
-                            label = topBudget?.categoryName ?: "No Budget Set",
-                            activeColor = if (budgetPercentage >= 0.8f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = 12.dp)
-                        )
-
-                        // If there are other budgets, display summaries
-                        if (budgets.size > 1) {
-                            HorizontalDivider()
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                budgets.drop(1).take(2).forEach { budget ->
-                                    val pct = if (budget.limitAmount > 0) (budget.currentSpend / budget.limitAmount).toFloat().coerceIn(0f, 1f) else 0f
-                                    val catCol = try {
-                                        Color(android.graphics.Color.parseColor(budget.colorHex))
-                                    } catch (e: Exception) {
-                                        MaterialTheme.colorScheme.secondary
-                                    }
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(budget.categoryName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                            Text("${(pct * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, color = catCol, fontWeight = FontWeight.Bold)
-                                        }
-                                        LinearProgressIndicator(
-                                            progress = { pct },
-                                            modifier = Modifier.fillMaxWidth().height(6.dp),
-                                            color = catCol,
-                                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                                        )
-                                    }
+                if (showSafeToSpend) {
+                    if (isTablet) {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    SafeToSpendDial(
+                                        safeToSpend = safeToSpendToday,
+                                        dailyLimit = dailyLimit,
+                                        spentToday = spentToday,
+                                        onSetBudgetClick = onConfigureBudgets
+                                    )
+                                }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    PrimaryBudgetRingCard(
+                                        budgets = budgets
+                                    )
                                 }
                             }
                         }
+                    } else {
+                        item {
+                            SafeToSpendDial(
+                                safeToSpend = safeToSpendToday,
+                                dailyLimit = dailyLimit,
+                                spentToday = spentToday,
+                                onSetBudgetClick = onConfigureBudgets
+                            )
+                        }
+                        item {
+                            PrimaryBudgetRingCard(
+                                budgets = budgets
+                            )
+                        }
+                    }
+                } else {
+                    item {
+                        PrimaryBudgetRingCard(
+                            budgets = budgets
+                        )
                     }
                 }
-            }
 
             // Recent Transactions Section Header
             item {
@@ -554,5 +573,76 @@ fun BreakdownRow(
             fontWeight = if (isBold) FontWeight.Bold else FontWeight.SemiBold,
             color = valueColor
         )
+    }
+}
+
+@Composable
+fun PrimaryBudgetRingCard(
+    budgets: List<com.example.kwarta.data.local.BudgetWithCategorySpend>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Primary Budget Limit",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Start)
+            )
+            
+            val topBudget = budgets.firstOrNull()
+            val budgetPercentage = if (topBudget != null && topBudget.limitAmount > 0) {
+                (topBudget.currentSpend / topBudget.limitAmount).toFloat().coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+
+            ExpressiveBudgetRing(
+                percentage = budgetPercentage,
+                label = topBudget?.categoryName ?: "No Budget Set",
+                activeColor = if (budgetPercentage >= 0.8f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+
+            // If there are other budgets, display summaries
+            if (budgets.size > 1) {
+                HorizontalDivider()
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    budgets.drop(1).take(2).forEach { budget ->
+                        val pct = if (budget.limitAmount > 0) (budget.currentSpend / budget.limitAmount).toFloat().coerceIn(0f, 1f) else 0f
+                        val catCol = try {
+                            Color(android.graphics.Color.parseColor(budget.colorHex))
+                        } catch (e: Exception) {
+                            MaterialTheme.colorScheme.secondary
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(budget.categoryName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                Text("${(pct * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, color = catCol, fontWeight = FontWeight.Bold)
+                            }
+                            LinearProgressIndicator(
+                                progress = { pct },
+                                modifier = Modifier.fillMaxWidth().height(6.dp),
+                                color = catCol,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -12,7 +12,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.core.content.ContextCompat
+import org.koin.android.ext.android.inject
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -24,6 +26,7 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
 
+    private val repository: com.example.kwarta.data.repository.FinanceRepository by inject()
     private var initialDestination by mutableStateOf<Destination?>(null)
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -43,7 +46,9 @@ class MainActivity : ComponentActivity() {
         scheduleDailyReminder()
 
         setContent {
-            KwartaTheme {
+            val themeMode by repository.getThemeMode().collectAsState(initial = "SYSTEM")
+            val themeColor by repository.getThemeColor().collectAsState(initial = "PURPLE")
+            KwartaTheme(themeMode = themeMode, themeColor = themeColor) {
                 KwartaNavigation(
                     initialDestination = initialDestination,
                     onDestinationConsumed = { initialDestination = null }

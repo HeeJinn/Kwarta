@@ -10,7 +10,10 @@ class DailyReminderWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        NotificationHelper.showDailyReminder(applicationContext)
+        val prefs = applicationContext.getSharedPreferences("kwarta_prefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("daily_reminder_enabled", true)) {
+            NotificationHelper.showDailyReminder(applicationContext)
+        }
         return Result.success()
     }
 }

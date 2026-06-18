@@ -34,4 +34,7 @@ interface TransactionDao {
         AND strftime('%Y-%m', date / 1000, 'unixepoch') = :monthYear
     """)
     fun sumTotalSpendByCategoryForMonth(categoryId: Long, monthYear: String): Flow<Double?>
+
+    @Query("DELETE FROM transactions")
+    suspend fun deleteAll(): Int
 }

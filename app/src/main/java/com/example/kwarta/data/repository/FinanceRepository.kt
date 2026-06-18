@@ -16,10 +16,17 @@ interface FinanceRepository {
     suspend fun getBudgetWithSpendSync(categoryId: Long, monthYear: String): BudgetWithCategorySpend?
     suspend fun getInitialBalanceOffset(): Double
     suspend fun setInitialBalanceOffset(offset: Double)
+    fun getThemeMode(): Flow<String>
+    suspend fun setThemeMode(mode: String)
+    fun getThemeColor(): Flow<String>
+    suspend fun setThemeColor(color: String)
+    fun getShowSafeToSpend(): Flow<Boolean>
+    suspend fun setShowSafeToSpend(show: Boolean)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
     suspend fun insertCategory(category: CategoryEntity): Long
     suspend fun updateCategory(category: CategoryEntity): Int
     suspend fun archiveCategory(id: Long): Int
     suspend fun upsertBudget(budget: com.example.kwarta.data.local.BudgetEntity): Long
     suspend fun deleteBudget(categoryId: Long, monthYear: String): Int
+    suspend fun clearAllData()
 }

@@ -3,6 +3,8 @@ package com.example.kwarta.data.repository
 import android.content.Context
 import com.example.kwarta.data.local.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -136,5 +138,64 @@ class FinanceRepositoryImpl(
 
     override suspend fun setInitialBalanceOffset(offset: Double) {
         prefs.edit().putString("initial_balance_offset", offset.toString()).apply()
+    }
+
+    override fun getThemeMode(): Flow<String> = callbackFlow {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "theme_mode") {
+                trySend(prefs.getString("theme_mode", "SYSTEM") ?: "SYSTEM")
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        send(prefs.getString("theme_mode", "SYSTEM") ?: "SYSTEM")
+        awaitClose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
+    override suspend fun setThemeMode(mode: String) {
+        prefs.edit().putString("theme_mode", mode).apply()
+    }
+
+    override fun getThemeColor(): Flow<String> = callbackFlow {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "theme_color") {
+                trySend(prefs.getString("theme_color", "PURPLE") ?: "PURPLE")
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        send(prefs.getString("theme_color", "PURPLE") ?: "PURPLE")
+        awaitClose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
+    override suspend fun setThemeColor(color: String) {
+        prefs.edit().putString("theme_color", color).apply()
+    }
+
+    override fun getShowSafeToSpend(): Flow<Boolean> = callbackFlow {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "show_safe_to_spend") {
+                trySend(prefs.getBoolean("show_safe_to_spend", true))
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        send(prefs.getBoolean("show_safe_to_spend", true))
+        awaitClose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
+    override suspend fun setShowSafeToSpend(show: Boolean) {
+        prefs.edit().putBoolean("show_safe_to_spend", show).apply()
+    }
+
+    override suspend fun clearAllData() {
+        transactionDao.deleteAll()
+        budgetDao.deleteAll()
+        categoryDao.deleteAll()
+        seedDatabase()
+        setInitialBalanceOffset(0.0)
     }
 }

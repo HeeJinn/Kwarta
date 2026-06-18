@@ -35,6 +35,9 @@ class DashboardViewModel(
         }
     }
 
+    val showSafeToSpend = repository.getShowSafeToSpend()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     val allTransactions = repository.getAllTransactions()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

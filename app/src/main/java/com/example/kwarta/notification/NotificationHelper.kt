@@ -61,6 +61,11 @@ object NotificationHelper {
         limit: Double,
         currentSpend: Double
     ) {
+        val prefs = context.getSharedPreferences("kwarta_prefs", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("budget_alerts_enabled", true)) {
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {

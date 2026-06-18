@@ -54,4 +54,7 @@ interface BudgetDao {
         GROUP BY b.categoryId
     """)
     suspend fun getBudgetWithSpendSync(categoryId: Long, monthYear: String): BudgetWithCategorySpend?
+
+    @Query("DELETE FROM budgets")
+    suspend fun deleteAll(): Int
 }
