@@ -36,6 +36,7 @@
 - **Rich Details**: Add custom titles, merchant names, notes, and attach receipt images.
 - **Direct Receipt Camera Capture**: When attaching a receipt, choose to take a photo directly using the device camera (using a secure local `FileProvider` and `TakePicture` contract) or pick an existing image from the gallery.
 - **Image Persistence**: Receipt attachments are securely copied to internal app storage.
+- **On-Device Receipt OCR Scanner**: Runs local, client-side text recognition (via Google ML Kit Vision) on attached receipt images to extract the merchant's name and total transaction amount, automatically pre-filling empty Title and Amount fields.
 
 ### 5. Settings, Personalization & Data Controls
 - **Flexible Theme Engine**: Toggle between System Default, Light, and Dark modes.
@@ -44,6 +45,12 @@
 - **Notifications Switches**: Choose to schedule or cancel Daily Reminders and enable/disable critical budget alerts.
 - **Data Reconciliation**: Reconcile actual balance discrepancies or reset the manual offset adjustment to revert strictly to computed values.
 - **Secure Data Wipe**: Double-confirmation factory reset in the Danger Zone to erase all custom data safely and restore defaults.
+
+### 6. Nearby Offline Sync
+- **No-Network Merging**: Share and sync financial records directly with a partner device offline without relying on mobile data or active internet connections.
+- **QR Code Data Exchange**: Compresses and packs the latest 30 logged transactions and their categories into a dense QR code payload using ZXing.
+- **Google Code Scanner Integration**: Allows partners to scan the QR code via Google's code-scanning interface, importing and parsing transactions dynamically.
+- **Smart Duplicate Filtering**: An automatic deduplication engine compares parsed transaction titles, amounts, types, and timestamps, preventing duplicate records from being inserted.
 
 ---
 
