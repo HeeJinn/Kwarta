@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalSharedTransitionApi::class)
 package com.example.kwarta.ui.screens.transactions
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ButtonGroupDefaults
@@ -46,12 +48,19 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import com.example.kwarta.ui.navigation.LocalSharedTransitionScope
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TransactionsScreen(
     onTransactionClick: (Long) -> Unit,
     onSyncClick: () -> Unit,
+    onBillSplitClick: () -> Unit = {},
     parentScrollConnection: NestedScrollConnection? = null,
     viewModel: TransactionsListViewModel = koinViewModel()
 ) {
@@ -143,6 +152,9 @@ fun TransactionsScreen(
                         IconButton(onClick = onSyncClick) {
                             Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = "Sync Transactions")
                         }
+                        IconButton(onClick = onBillSplitClick) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.CallSplit, contentDescription = "Split Bill")
+                        }
                         IconButton(onClick = { isSearchActive = true }) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
                         }
@@ -219,6 +231,30 @@ fun TransactionsScreen(
                             val color = if (isIncome) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
                             val sign = if (isIncome) "+" else "-"
 
+                            val sharedTransitionScope = LocalSharedTransitionScope.current
+                            val animatedVisibilityScope = LocalNavAnimatedContentScope.current
+                            val isDetailTransition = remember(animatedVisibilityScope.transition.currentState, animatedVisibilityScope.transition.targetState) {
+                                val currentKey = (animatedVisibilityScope.transition.currentState as? androidx.navigation3.scene.Scene<*>)?.key
+                                val targetKey = (animatedVisibilityScope.transition.targetState as? androidx.navigation3.scene.Scene<*>)?.key
+                                currentKey is com.example.kwarta.ui.navigation.Destination.TransactionDetail || targetKey is com.example.kwarta.ui.navigation.Destination.TransactionDetail
+                            }
+                            val cardBoundsModifier = if (sharedTransitionScope != null && isDetailTransition) {
+                                with(sharedTransitionScope) {
+                                    Modifier.sharedBounds(
+                                        rememberSharedContentState(key = "transaction_${tx.id}"),
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        boundsTransform = { _, _ ->
+                                            spring(
+                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            )
+                                        }
+                                    )
+                                }
+                            } else {
+                                Modifier
+                            }
+
                             ListItem(
                                 leadingContent = {
                                     val catColor = cat?.colorHex?.let {
@@ -267,7 +303,7 @@ fun TransactionsScreen(
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 },
-                                modifier = Modifier.clickable { onTransactionClick(tx.id) }
+                                modifier = cardBoundsModifier.clickable { onTransactionClick(tx.id) }
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         }

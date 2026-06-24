@@ -11,6 +11,9 @@
 - **Expressive Balance Animation**: On opening the app, the total balance counts up smoothly from zero to the actual balance using a fast-out-slow-in animation.
 - **Pill-Shaped Navigation Toolbar**: Utilizes a floating, pill-shaped `HorizontalFloatingToolbar` nested scrolling companion that automatically slides out of view when scrolling down and reappears on scroll up.
 - **Spring-Animated FAB Menu**: A consolidated 3-action floating button menu (Add Income, Add Expense, Set Budget) that expands and collapses with smooth physical spring transitions and a dimming background.
+- **Material Design 3 Container Transform**: Smooth container morph/transform transitions when entering a transaction detail screen from either the Dashboard or Transactions tab, utilizing unified shared elements keys (`"transaction_${id}"`) in Compose's `SharedTransitionLayout`.
+- **Predictive Back Gesture (Android 14+)**: Opts-in to native system predictive back gestures (via `enableOnBackInvokedCallback="true"`), smoothly scaling and morphing detail views back into list item containers upon swipe-back.
+- **Unified List Spacing Alignment**: Recent transactions on the Dashboard screen are structured to perfectly match the main Transactions list tab, featuring aligned dividers, identical horizontal padding offsets, and matching typography.
 
 ### 2. Accessibility Shortcuts & Urgent Recording
 - **Obsidian Home Screen Widget**: A premium, glassmorphic `3x2` widget featuring:
@@ -46,11 +49,20 @@
 - **Data Reconciliation**: Reconcile actual balance discrepancies or reset the manual offset adjustment to revert strictly to computed values.
 - **Secure Data Wipe**: Double-confirmation factory reset in the Danger Zone to erase all custom data safely and restore defaults.
 
-### 6. Nearby Offline Sync
+### 6. Offline QR-Based Group Bill Splitter
+- **Shared QR Split Payload**: Input total bill amount and count of people to calculate per-person shares. Generates a QR code carrying the split expense details.
+- **Nearby Share Scanner**: Friends can scan the QR code to instantly approve and record their share as a transaction on their device.
+- **Host Share Logging**: Clicking "Done" on the generator's screen automatically logs the host's own share to their local transaction history and displays a confirmation toast.
+
+### 7. Nearby Offline Sync
 - **No-Network Merging**: Share and sync financial records directly with a partner device offline without relying on mobile data or active internet connections.
 - **QR Code Data Exchange**: Compresses and packs the latest 30 logged transactions and their categories into a dense QR code payload using ZXing.
 - **Google Code Scanner Integration**: Allows partners to scan the QR code via Google's code-scanning interface, importing and parsing transactions dynamically.
 - **Smart Duplicate Filtering**: An automatic deduplication engine compares parsed transaction titles, amounts, types, and timestamps, preventing duplicate records from being inserted.
+
+### 8. Offline Local Voice Expense Logger
+- **Natural Language Parsing**: Tap the **🎙 Voice Log** FAB menu item to speak a phrase like *"McDonalds 250 pesos"* or *"Salary 50000"* to automatically parse descriptions, amounts, and transaction types.
+- **Zero-Network NLP Model**: Runs regex-based smart heuristic parsing entirely local and offline to instantly log transactions without sending voice data to remote servers.
 
 ---
 

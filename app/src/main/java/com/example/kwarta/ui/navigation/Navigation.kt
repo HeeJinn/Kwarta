@@ -15,7 +15,9 @@ import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.HorizontalFloatingToolbar
@@ -59,6 +61,7 @@ import androidx.compose.ui.zIndex
 import androidx.activity.compose.BackHandler
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import com.example.kwarta.ui.screens.budgets.BudgetsScreen
 import com.example.kwarta.ui.screens.dashboard.DashboardScreen
 import com.example.kwarta.ui.screens.transactions.AddTransactionScreen
@@ -66,6 +69,17 @@ import com.example.kwarta.ui.screens.transactions.TransactionsScreen
 import androidx.compose.runtime.collectAsState
 import org.koin.compose.koinInject
 import com.example.kwarta.ui.screens.onboarding.OnboardingScreen
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.CompositionLocalProvider
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+val LocalSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
 
 
 
@@ -75,6 +89,7 @@ sealed interface Destination {
     data object Transactions : Destination
     data object Budgets : Destination
     data object OfflineSync : Destination
+    data object BillSplitter : Destination
     data object Settings : Destination
     data class AddTransaction(val type: String) : Destination
     data class TransactionDetail(val transactionId: Long) : Destination
@@ -92,7 +107,7 @@ val bottomNavItems = listOf(
     BottomNavItem("Budgets", Icons.Rounded.AccountBalanceWallet, Destination.Budgets)
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun KwartaNavigation(
     initialDestination: Destination? = null,
@@ -133,6 +148,7 @@ fun KwartaNavigation(
     val density = LocalDensity.current
     val scrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(exitDirection = Bottom)
     var isFabExpanded by remember { mutableStateOf(false) }
+    var showVoiceSheet by remember { mutableStateOf(false) }
     val expansionProgress by animateFloatAsState(
         targetValue = if (isFabExpanded) 1f else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -161,236 +177,280 @@ fun KwartaNavigation(
         isFabExpanded = false
     }
 
+    val myEntryProvider: (Any) -> NavEntry<Any> = remember {
+        { key: Any ->
+            val entry = when (key) {
+                is Destination.Dashboard -> NavEntry(key) {
+                    DashboardScreen(
+                        onAddTransaction = { type -> backStack.add(Destination.AddTransaction(type)) },
+                        onTransactionClick = { id -> backStack.add(Destination.TransactionDetail(id)) },
+                        onConfigureBudgets = {
+                            backStack.clear()
+                            backStack.add(Destination.Dashboard)
+                            backStack.add(Destination.Budgets)
+                        },
+                        onViewAllTransactions = {
+                            backStack.clear()
+                            backStack.add(Destination.Dashboard)
+                            backStack.add(Destination.Transactions)
+                        },
+                        onSettingsClick = { backStack.add(Destination.Settings) }
+                    )
+                }
+                is Destination.Transactions -> NavEntry(key) {
+                    TransactionsScreen(
+                        onTransactionClick = { id -> backStack.add(Destination.TransactionDetail(id)) },
+                        onSyncClick = { backStack.add(Destination.OfflineSync) },
+                        onBillSplitClick = { backStack.add(Destination.BillSplitter) },
+                        parentScrollConnection = scrollBehavior
+                    )
+                }
+                is Destination.OfflineSync -> NavEntry(key) {
+                    com.example.kwarta.ui.screens.transactions.OfflineSyncScreen(
+                        onBack = { backStack.removeLastOrNull() }
+                    )
+                }
+                is Destination.BillSplitter -> NavEntry(key) {
+                    com.example.kwarta.ui.screens.transactions.BillSplitterScreen(
+                        onBack = { backStack.removeLastOrNull() }
+                    )
+                }
+                is Destination.Budgets -> NavEntry(key) {
+                    BudgetsScreen(
+                        onRegisterFabClick = { callback -> onBudgetsFabClick = callback },
+                        parentScrollConnection = scrollBehavior
+                    )
+                }
+                is Destination.AddTransaction -> NavEntry(key) {
+                    AddTransactionScreen(
+                        transactionType = key.type,
+                        onBack = { backStack.removeLastOrNull() }
+                    )
+                }
+                is Destination.TransactionDetail -> NavEntry(key) {
+                    com.example.kwarta.ui.screens.transactions.TransactionDetailScreen(
+                        transactionId = key.transactionId,
+                        onNavigateBack = { backStack.removeLastOrNull() },
+                        animatedVisibilityScope = LocalNavAnimatedContentScope.current
+                    )
+                }
+                is Destination.Settings -> NavEntry(key) {
+                    com.example.kwarta.ui.screens.settings.SettingsScreen(
+                        onBack = { backStack.removeLastOrNull() }
+                    )
+                }
+                is Destination.Onboarding -> NavEntry(key) {
+                    OnboardingScreen(
+                        onComplete = {
+                            backStack.clear()
+                            backStack.add(Destination.Dashboard)
+                        }
+                    )
+                }
+                else -> NavEntry(Unit) { /* Handle unknown */ }
+            }
+            @Suppress("UNCHECKED_CAST")
+            entry as NavEntry<Any>
+        }
+    }
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior)
     ) { innerPadding ->
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                NavDisplay(
-                    backStack = backStack,
-                    onBack = { backStack.removeLastOrNull() },
-                    entryProvider = { key ->
-                        when (key) {
-                            is Destination.Dashboard -> NavEntry(key) {
-                                DashboardScreen(
-                                    onAddTransaction = { type -> backStack.add(Destination.AddTransaction(type)) },
-                                    onTransactionClick = { id -> backStack.add(Destination.TransactionDetail(id)) },
-                                    onConfigureBudgets = {
-                                        backStack.clear()
-                                        backStack.add(Destination.Dashboard)
-                                        backStack.add(Destination.Budgets)
-                                    },
-                                    onViewAllTransactions = {
-                                        backStack.clear()
-                                        backStack.add(Destination.Dashboard)
-                                        backStack.add(Destination.Transactions)
-                                    },
-                                    onSettingsClick = { backStack.add(Destination.Settings) }
-                                )
-                            }
-                            is Destination.Transactions -> NavEntry(key) {
-                                TransactionsScreen(
-                                    onTransactionClick = { id -> backStack.add(Destination.TransactionDetail(id)) },
-                                    onSyncClick = { backStack.add(Destination.OfflineSync) },
-                                    parentScrollConnection = scrollBehavior
-                                )
-                            }
-                            is Destination.OfflineSync -> NavEntry(key) {
-                                com.example.kwarta.ui.screens.transactions.OfflineSyncScreen(
-                                    onBack = { backStack.removeLastOrNull() }
-                                )
-                            }
-                            is Destination.Budgets -> NavEntry(key) {
-                                BudgetsScreen(
-                                    onRegisterFabClick = { callback -> onBudgetsFabClick = callback },
-                                    parentScrollConnection = scrollBehavior
-                                )
-                            }
-                            is Destination.AddTransaction -> NavEntry(key) {
-                                AddTransactionScreen(
-                                    transactionType = key.type,
-                                    onBack = { backStack.removeLastOrNull() }
-                                )
-                            }
-                            is Destination.TransactionDetail -> NavEntry(key) {
-                                com.example.kwarta.ui.screens.transactions.TransactionDetailScreen(
-                                    transactionId = key.transactionId,
-                                    onNavigateBack = { backStack.removeLastOrNull() }
-                                )
-                            }
-                            is Destination.Settings -> NavEntry(key) {
-                                com.example.kwarta.ui.screens.settings.SettingsScreen(
-                                    onBack = { backStack.removeLastOrNull() }
-                                )
-                            }
-                            is Destination.Onboarding -> NavEntry(key) {
-                                OnboardingScreen(
-                                    onComplete = {
-                                        backStack.clear()
-                                        backStack.add(Destination.Dashboard)
-                                    }
-                                )
-                            }
-                            else -> NavEntry(Unit) { /* Handle unknown */ }
-                        }
-                    }
-                )
-            }
-
-            if (isFabExpanded) {
+        SharedTransitionLayout {
+            CompositionLocalProvider(LocalSharedTransitionScope provides this) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.32f))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            isFabExpanded = false
-                        }
-                )
-            }
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        NavDisplay(
+                            backStack = backStack,
+                            onBack = { backStack.removeLastOrNull() },
+                            entryProvider = myEntryProvider
+                        )
+                    }
 
-            if (isTopLevel) {
-                HorizontalFloatingToolbar(
-                    expanded = true,
-                    floatingActionButton = {
-                        FloatingActionButtonMenu(
-                            modifier = (if (expansionProgress > 0f) {
-                                Modifier.wrapContentSize(
-                                    align = Alignment.BottomCenter,
-                                    unbounded = true
-                                )
-                            } else {
-                                Modifier
-                            }).offset(y = 14.dp),
-                            expanded = isFabExpanded,
-                            button = {
-                                TooltipBox(
-                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Above
-                                    ),
-                                    tooltip = {
-                                        PlainTooltip(
-                                            modifier = Modifier.semantics {
-                                                liveRegion = LiveRegionMode.Assertive
-                                                paneTitle = "Actions Menu"
-                                            }
-                                        ) {
-                                            Text("Actions Menu")
-                                        }
-                                    },
-                                    state = rememberTooltipState()
+                    if (isFabExpanded) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.32f))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
                                 ) {
-                                    ToggleFloatingActionButton(
-                                        modifier = Modifier.semantics {
-                                            stateDescription = if (isFabExpanded) "Expanded" else "Collapsed"
-                                            contentDescription = "Actions Menu"
-                                        },
-                                        checked = isFabExpanded,
-                                        onCheckedChange = { isFabExpanded = !isFabExpanded }
-                                    ) {
-                                        val imageVector by remember {
-                                            derivedStateOf {
-                                                if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add
-                                            }
-                                        }
-                                        Icon(
-                                            painter = rememberVectorPainter(imageVector),
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .size(32.dp)
-                                                .animateIcon({ checkedProgress })
-                                        )
-                                    }
+                                    isFabExpanded = false
                                 }
-                            }
-                        ) {
-                            FloatingActionButtonMenuItem(
-                                onClick = {
-                                    isFabExpanded = false
-                                    backStack.add(Destination.AddTransaction("INCOME"))
-                                },
-                                icon = { Icon(Icons.Default.Paid, contentDescription = "Add Income") },
-                                text = { Text("Add Income") }
-                            )
-                            FloatingActionButtonMenuItem(
-                                onClick = {
-                                    isFabExpanded = false
-                                    backStack.add(Destination.AddTransaction("EXPENSE"))
-                                },
-                                icon = { Icon(Icons.Default.ShoppingCart, contentDescription = "Add Expense") },
-                                text = { Text("Add Expense") }
-                            )
-                            FloatingActionButtonMenuItem(
-                                onClick = {
-                                    isFabExpanded = false
-                                    if (currentDestination is Destination.Budgets) {
-                                        onBudgetsFabClick?.invoke()
+                        )
+                    }
+
+                    if (isTopLevel) {
+                        HorizontalFloatingToolbar(
+                            expanded = true,
+                            floatingActionButton = {
+                                FloatingActionButtonMenu(
+                                    modifier = (if (expansionProgress > 0f) {
+                                        Modifier.wrapContentSize(
+                                            align = Alignment.BottomCenter,
+                                            unbounded = true
+                                        )
                                     } else {
-                                        triggerSetBudgetOnLoad = true
-                                        if (currentDestination != Destination.Budgets) {
-                                            backStack.clear()
-                                            backStack.add(Destination.Dashboard) // Keep Dashboard as root
-                                            backStack.add(Destination.Budgets)
-                                        }
-                                    }
-                                },
-                                icon = { Icon(Icons.Rounded.AccountBalanceWallet, contentDescription = "Set Budget") },
-                                text = { Text("Set Budget") }
-                            )
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .offset(y = -ScreenOffset)
-                        .zIndex(1f),
-                    colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(),
-                    scrollBehavior = scrollBehavior,
-                    content = {
-                        bottomNavItems.forEach { item ->
-                            val isSelected = currentDestination == item.destination
-                            TooltipBox(
-                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                    TooltipAnchorPosition.Above
-                                ),
-                                tooltip = {
-                                    PlainTooltip(
-                                        modifier = Modifier.semantics {
-                                            liveRegion = LiveRegionMode.Assertive
-                                            paneTitle = item.title
-                                        }
-                                    ) {
-                                        Text(item.title)
-                                    }
-                                },
-                                state = rememberTooltipState()
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        if (currentDestination != item.destination) {
-                                            backStack.clear()
-                                            backStack.add(Destination.Dashboard) // Keep Dashboard as root
-                                            if (item.destination != Destination.Dashboard) {
-                                                backStack.add(item.destination)
+                                        Modifier
+                                    }).offset(y = 14.dp),
+                                    expanded = isFabExpanded,
+                                    button = {
+                                        TooltipBox(
+                                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                                TooltipAnchorPosition.Above
+                                            ),
+                                            tooltip = {
+                                                PlainTooltip(
+                                                    modifier = Modifier.semantics {
+                                                        liveRegion = LiveRegionMode.Assertive
+                                                        paneTitle = "Actions Menu"
+                                                    }
+                                                ) {
+                                                    Text("Actions Menu")
+                                                }
+                                            },
+                                            state = rememberTooltipState()
+                                        ) {
+                                            ToggleFloatingActionButton(
+                                                modifier = Modifier.semantics {
+                                                    stateDescription = if (isFabExpanded) "Expanded" else "Collapsed"
+                                                    contentDescription = "Actions Menu"
+                                                },
+                                                checked = isFabExpanded,
+                                                onCheckedChange = { isFabExpanded = !isFabExpanded }
+                                            ) {
+                                                val imageVector by remember {
+                                                    derivedStateOf {
+                                                        if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add
+                                                    }
+                                                }
+                                                Icon(
+                                                    painter = rememberVectorPainter(imageVector),
+                                                    contentDescription = null,
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .animateIcon({ checkedProgress })
+                                                )
                                             }
                                         }
                                     }
                                 ) {
-                                    Icon(
-                                        imageVector = item.icon,
-                                        contentDescription = item.title,
-                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    FloatingActionButtonMenuItem(
+                                        onClick = {
+                                            isFabExpanded = false
+                                            backStack.add(Destination.AddTransaction("INCOME"))
+                                        },
+                                        icon = { Icon(Icons.Default.Paid, contentDescription = "Add Income") },
+                                        text = { Text("Add Income") }
+                                    )
+                                    FloatingActionButtonMenuItem(
+                                        onClick = {
+                                            isFabExpanded = false
+                                            backStack.add(Destination.AddTransaction("EXPENSE"))
+                                        },
+                                        icon = { Icon(Icons.Default.ShoppingCart, contentDescription = "Add Expense") },
+                                        text = { Text("Add Expense") }
+                                    )
+                                    FloatingActionButtonMenuItem(
+                                        onClick = {
+                                            isFabExpanded = false
+                                            if (currentDestination is Destination.Budgets) {
+                                                onBudgetsFabClick?.invoke()
+                                            } else {
+                                                triggerSetBudgetOnLoad = true
+                                                if (currentDestination != Destination.Budgets) {
+                                                    backStack.clear()
+                                                    backStack.add(Destination.Dashboard) // Keep Dashboard as root
+                                                    backStack.add(Destination.Budgets)
+                                                }
+                                            }
+                                        },
+                                        icon = { Icon(Icons.Rounded.AccountBalanceWallet, contentDescription = "Set Budget") },
+                                        text = { Text("Set Budget") }
+                                    )
+                                    FloatingActionButtonMenuItem(
+                                        onClick = {
+                                            isFabExpanded = false
+                                            showVoiceSheet = true
+                                        },
+                                        icon = { Icon(Icons.Default.Mic, contentDescription = "Voice Log") },
+                                        text = { Text("Voice Log") }
+                                    )
+                                    FloatingActionButtonMenuItem(
+                                        onClick = {
+                                            isFabExpanded = false
+                                            backStack.add(Destination.BillSplitter)
+                                        },
+                                        icon = { Icon(Icons.AutoMirrored.Filled.CallSplit, contentDescription = "Split Bill") },
+                                        text = { Text("Split Bill") }
                                     )
                                 }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .offset(y = -ScreenOffset)
+                                .zIndex(1f),
+                            colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(),
+                            scrollBehavior = scrollBehavior,
+                            content = {
+                                bottomNavItems.forEach { item ->
+                                    val isSelected = currentDestination == item.destination
+                                    TooltipBox(
+                                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                            TooltipAnchorPosition.Above
+                                        ),
+                                        tooltip = {
+                                            PlainTooltip(
+                                                modifier = Modifier.semantics {
+                                                    liveRegion = LiveRegionMode.Assertive
+                                                    paneTitle = item.title
+                                                }
+                                            ) {
+                                                Text(item.title)
+                                            }
+                                        },
+                                        state = rememberTooltipState()
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                if (currentDestination != item.destination) {
+                                                    backStack.clear()
+                                                    backStack.add(Destination.Dashboard) // Keep Dashboard as root
+                                                    if (item.destination != Destination.Dashboard) {
+                                                        backStack.add(item.destination)
+                                                    }
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = item.icon,
+                                                contentDescription = item.title,
+                                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
                             }
-                        }
+                        )
                     }
-                )
+
+                    // Voice Input Bottom Sheet
+                    if (showVoiceSheet) {
+                        com.example.kwarta.ui.screens.transactions.VoiceInputSheet(
+                            onDismiss = { showVoiceSheet = false },
+                            onNavigateToEdit = { type ->
+                                showVoiceSheet = false
+                                backStack.add(Destination.AddTransaction(type))
+                            }
+                        )
+                    }
+                }
             }
         }
     }

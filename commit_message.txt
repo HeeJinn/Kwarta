@@ -1,0 +1,8 @@
+feat: add offline voice logging, group bill splitter, MD3 container transform, predictive back, and dashboard spacing fixes
+
+- Voice Logger: Added offline local voice logger (VoiceInputSheet and VoiceTransactionParser) using natural language regex heuristics to parse and log transactions instantly.
+- Group Bill Splitter: Implemented offline QR-based group bill splitting (BillSplitterScreen) with support for host share database insertion and confirmation toast on Done click.
+- Container Transform: Wrapped navigation in SharedTransitionLayout and implemented conditional container transform transitions (Modifier.sharedBounds) using unified transaction keys between list items and detail screens.
+- Predictive Back: Enabled predictive back gestures on Android 14+ (enableOnBackInvokedCallback="true") and integrated Navigation 3's native pop animations to scale and morph transaction details back to the list.
+- Spacing & Margins: Standardized Recent Transactions spacing and margins on the Dashboard screen to align perfectly with the Transactions tab. Fixed layout overlapping by wrapping components in a single Column layout inside the LazyColumn item.
+- Documentation: Updated README.md to describe all new features and modifications.

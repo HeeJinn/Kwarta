@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Sync
@@ -99,6 +100,11 @@ fun OfflineSyncScreen(
             }
         }
     }
+
+    var showSplitConfirmDialog by remember { mutableStateOf(false) }
+    var splitTitle by remember { mutableStateOf("") }
+    var splitAmount by remember { mutableStateOf(0.0) }
+    var splitDate by remember { mutableStateOf(0L) }
 
     Scaffold(
         topBar = {
@@ -196,6 +202,24 @@ fun OfflineSyncScreen(
                                     scanner.startScan()
                                         .addOnSuccessListener { barcode ->
                                             val rawValue = barcode.rawValue ?: ""
+                                            
+                                            // Detect bill split payload
+                                            try {
+                                                val json = JSONObject(rawValue)
+                                                if (json.optString("s") == "split") {
+                                                    // It's a bill split QR code
+                                                    splitTitle = json.optString("n", "Shared Expense")
+                                                    splitAmount = json.optDouble("a", 0.0)
+                                                    splitDate = json.optLong("d", System.currentTimeMillis())
+                                                    isSyncingData = false
+                                                    showSplitConfirmDialog = true
+                                                    return@addOnSuccessListener
+                                                }
+                                            } catch (_: Exception) {
+                                                // Not a JSON object — fall through to normal sync
+                                            }
+                                            
+                                            // Normal bulk sync flow
                                             scope.launch(Dispatchers.IO) {
                                                 try {
                                                     val jsonArray = JSONArray(rawValue)
@@ -337,6 +361,82 @@ fun OfflineSyncScreen(
                 }
             }
         }
+    }
+
+    // Bill Split Confirmation Dialog
+    if (showSplitConfirmDialog) {
+        val currencyFormatter = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-PH"))
+        AlertDialog(
+            onDismissRequest = { showSplitConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.CallSplit,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = { Text("Shared Expense") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Someone shared a bill split with you:")
+                    Text(
+                        text = splitTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Your share: ${currencyFormatter.format(splitAmount)}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "This will be logged as an expense transaction.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            val categories = repository.getAllActiveCategories().firstOrNull() ?: emptyList()
+                            val catId = categories.firstOrNull {
+                                it.transactionType == "EXPENSE" || it.transactionType == "BOTH"
+                            }?.id
+
+                            if (catId != null) {
+                                val tx = TransactionEntity(
+                                    title = splitTitle,
+                                    amount = splitAmount,
+                                    type = "EXPENSE",
+                                    categoryId = catId,
+                                    date = splitDate,
+                                    note = "Bill Split — Shared Expense",
+                                    merchantName = null,
+                                    imagePath = null,
+                                    status = "CLEARED"
+                                )
+                                repository.insertTransaction(tx)
+                                withContext(Dispatchers.Main) {
+                                    showSplitConfirmDialog = false
+                                    Toast.makeText(context, "Shared expense saved: ${currencyFormatter.format(splitAmount)}", Toast.LENGTH_LONG).show()
+                                    onBack()
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text("Save Expense")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSplitConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

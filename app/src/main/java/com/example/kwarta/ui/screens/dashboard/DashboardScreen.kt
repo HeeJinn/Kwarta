@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalSharedTransitionApi::class)
 package com.example.kwarta.ui.screens.dashboard
 
 import androidx.compose.animation.*
@@ -57,6 +58,8 @@ import java.time.YearMonth
 import java.util.Date
 import java.util.Locale
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.kwarta.ui.navigation.LocalSharedTransitionScope
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -176,7 +179,7 @@ fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
@@ -189,7 +192,9 @@ fun DashboardScreen(
                         )
                     )
                     Surface(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
                         shape = RoundedCornerShape(28.dp),
                         color = Color.Transparent,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -272,7 +277,9 @@ fun DashboardScreen(
                     if (isTablet) {
                         item {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 verticalAlignment = Alignment.Top
                             ) {
@@ -297,98 +304,137 @@ fun DashboardScreen(
                                 safeToSpend = safeToSpendToday,
                                 dailyLimit = dailyLimit,
                                 spentToday = spentToday,
-                                onSetBudgetClick = onConfigureBudgets
+                                onSetBudgetClick = onConfigureBudgets,
+                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
                         item {
                             PrimaryBudgetRingCard(
-                                budgets = budgets
+                                budgets = budgets,
+                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
                     }
                 } else {
                     item {
                         PrimaryBudgetRingCard(
-                            budgets = budgets
+                            budgets = budgets,
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
                 }
 
-            // Recent Transactions Section Header
+            // Recent Transactions Section Header and List
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Recent Transactions",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    TextButton(onClick = onViewAllTransactions) {
-                        Text("See All")
-                    }
-                }
-                
-                if (recentTransactions.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("No recent transactions", color = MaterialTheme.colorScheme.outline)
-                    }
-                }
-            }
-
-            // Recent Transactions list
-            items(recentTransactions, key = { it.id }) { transaction ->
-                val isIncome = transaction.type == "INCOME"
-                val color = if (isIncome) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
-                val sign = if (isIncome) "+" else "-"
-
-                // Try to find the category color from budgets or databases
-                val budget = budgets.find { it.categoryId == transaction.categoryId }
-                val catColor = budget?.colorHex?.let {
-                    try {
-                        Color(android.graphics.Color.parseColor(it))
-                    } catch (e: Exception) {
-                        null
-                    }
-                } ?: MaterialTheme.colorScheme.primary
-
-                ListItem(
-                    leadingContent = {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(catColor.copy(alpha = 0.15f), shape = CircleShape)
-                                .border(1.dp, catColor.copy(alpha = 0.4f), shape = CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = budget?.categoryName?.take(1) ?: "T",
-                                color = catColor,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                    },
-                    headlineContent = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = transaction.title,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    supportingContent = { Text(dateFormatter.format(Date(transaction.date))) },
-                    trailingContent = {
-                        Text(
-                            text = "$sign${currencyFormatter.format(transaction.amount)}",
-                            color = color,
+                            text = "Recent Transactions",
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
-                    },
-                    modifier = Modifier.clickable { onTransactionClick(transaction.id) }
-                )
-                HorizontalDivider()
+                        TextButton(onClick = onViewAllTransactions) {
+                            Text("See All")
+                        }
+                    }
+                    
+                    if (recentTransactions.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No recent transactions", color = MaterialTheme.colorScheme.outline)
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        recentTransactions.forEachIndexed { index, transaction ->
+                            val isIncome = transaction.type == "INCOME"
+                            val color = if (isIncome) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                            val sign = if (isIncome) "+" else "-"
+
+                            val budget = budgets.find { it.categoryId == transaction.categoryId }
+                            val catColor = budget?.colorHex?.let {
+                                try {
+                                    Color(android.graphics.Color.parseColor(it))
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            } ?: MaterialTheme.colorScheme.primary
+
+                            val sharedTransitionScope = LocalSharedTransitionScope.current
+                            val animatedVisibilityScope = LocalNavAnimatedContentScope.current
+                            val isDetailTransition = remember(animatedVisibilityScope.transition.currentState, animatedVisibilityScope.transition.targetState) {
+                                val currentKey = (animatedVisibilityScope.transition.currentState as? androidx.navigation3.scene.Scene<*>)?.key
+                                val targetKey = (animatedVisibilityScope.transition.targetState as? androidx.navigation3.scene.Scene<*>)?.key
+                                currentKey is com.example.kwarta.ui.navigation.Destination.TransactionDetail || targetKey is com.example.kwarta.ui.navigation.Destination.TransactionDetail
+                            }
+                            val cardBoundsModifier = if (sharedTransitionScope != null && isDetailTransition) {
+                                with(sharedTransitionScope) {
+                                    Modifier.sharedBounds(
+                                        rememberSharedContentState(key = "transaction_${transaction.id}"),
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        boundsTransform = { _, _ ->
+                                            spring(
+                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            )
+                                        }
+                                    )
+                                }
+                            } else {
+                                Modifier
+                            }
+
+                            ListItem(
+                                leadingContent = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .background(catColor.copy(alpha = 0.15f), shape = CircleShape)
+                                            .border(1.dp, catColor.copy(alpha = 0.4f), shape = CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = budget?.categoryName?.take(1) ?: "T",
+                                            color = catColor,
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                    }
+                                },
+                                headlineContent = {
+                                    Text(
+                                        text = transaction.title,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                supportingContent = { Text(dateFormatter.format(Date(transaction.date))) },
+                                trailingContent = {
+                                    Text(
+                                        text = "$sign${currencyFormatter.format(transaction.amount)}",
+                                        color = color,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                },
+                                modifier = cardBoundsModifier.clickable { onTransactionClick(transaction.id) }
+                            )
+                            if (index < recentTransactions.lastIndex) {
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            }
+                        }
+                    }
+                }
             }
         }
 
