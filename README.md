@@ -1,128 +1,153 @@
-  # Kwarta - Personal Finance & Budgeting App
+<div align="center">
 
-**Kwarta** is a modern, premium, offline-first personal finance and budgeting Android application. Built with **Kotlin**, **Jetpack Compose (Material 3 Expressive Design)**, **Room Database**, and **Koin**, Kwarta offers a sleek, intuitive, responsive, and gorgeous experience for managing your income, tracking expenses, and planning monthly budgets.
+# Kwarta
 
----
+**Offline-first personal finance & budgeting for Android.**
+Track income and expenses, plan monthly budgets, and split bills, with no account, no cloud and no ads.
+
+![Kotlin](https://img.shields.io/badge/Kotlin-2.1.20-7F52FF?logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203%20Expressive-4285F4?logo=jetpackcompose&logoColor=white)
+![Min SDK](https://img.shields.io/badge/minSdk-30-3DDC84?logo=android&logoColor=white)
+![Offline](https://img.shields.io/badge/data-100%25%20on--device-222222)
+
+<img src="docs/kwarta-mockup.png" alt="Kwarta screens: Budgets, Dashboard and Split bill" width="100%">
+
+</div>
+
+## ✨ Highlights
+
+| | |
+|---|---|
+| 💸 **Dashboard at a glance** | Animated balance hero card, daily safe-to-spend dial and recent transactions. |
+| 📊 **Smart budgets** | Per-category monthly limits with a segmented spending bar and 75% / 90% alerts. |
+| 🧾 **Receipt OCR** | Snap a receipt; on-device ML Kit fills in the merchant and total. |
+| 🎙️ **Voice logging** | Say *"McDonalds 250 pesos"* and it's logged. Parsed fully offline. |
+| 👥 **QR bill splitter** | Split a bill, show a QR, friends scan to record their share. |
+| 🔄 **Nearby sync** | Merge recent transactions with a partner's phone over QR, deduplicated. |
+| 📤 **Export reports** | Share your transactions as a CSV spreadsheet or PDF report. |
+| ⚡ **Log from anywhere** | Home-screen widget, launcher shortcuts, Quick Settings tile and assist gesture. |
+| 🎨 **Make it yours** | Light/dark, 5 palettes or Material You dynamic color. |
 
 ## 🚀 Features
 
-### 1. Material 3 Expressive UI & Aesthetics
-- **Vibrant Hero Balance Card**: A beautiful primary-to-secondary gradient hero card displaying your finances.
-- **Expressive Balance Animation**: On opening the app, the total balance counts up smoothly from zero to the actual balance using a fast-out-slow-in animation.
-- **Pill-Shaped Navigation Toolbar**: Utilizes a floating, pill-shaped `HorizontalFloatingToolbar` nested scrolling companion that automatically slides out of view when scrolling down and reappears on scroll up.
-- **Spring-Animated FAB Menu**: A consolidated 3-action floating button menu (Add Income, Add Expense, Set Budget) that expands and collapses with smooth physical spring transitions and a dimming background.
-- **Material Design 3 Container Transform**: Smooth container morph/transform transitions when entering a transaction detail screen from either the Dashboard or Transactions tab, utilizing unified shared elements keys (`"transaction_${id}"`) in Compose's `SharedTransitionLayout`.
-- **Predictive Back Gesture (Android 14+)**: Opts-in to native system predictive back gestures (via `enableOnBackInvokedCallback="true"`), smoothly scaling and morphing detail views back into list item containers upon swipe-back.
-- **Unified List Spacing Alignment**: Recent transactions on the Dashboard screen are structured to perfectly match the main Transactions list tab, featuring aligned dividers, identical horizontal padding offsets, and matching typography.
+<details>
+<summary><b>Material 3 Expressive UI</b></summary>
 
-### 2. Accessibility Shortcuts & Urgent Recording
-- **Obsidian Home Screen Widget**: A premium, glassmorphic `3x2` widget featuring:
-  - An inner translucent card isolating the total balance.
-  - Large circular buttons (`56dp`) with clear flow arrow indicators.
-  - Clear descriptive labels (**Income** / **Expense**) to make functions immediately recognizable.
-  - Programmatic updates triggered directly upon database insertions to keep the widget live.
-- **Launcher App Shortcuts**: Long-press the Kwarta launcher icon to instantly access "Add Expense" or "Add Income" shortcuts.
-- **System Quick Settings Tile**: Add the custom "Quick Expense" tile to your device status drawer to launch straight into the expense record view with a single swipe.
-- **Home Button Assist Gesture**: Register Kwarta as the system's default Digital Assistant App so that holding down the home button (or corner-swiping) launches the expense recorder instantly.
-- **Intent Routing Engine**: A robust routing wrapper in `MainActivity` and Compose `Navigation` that parses intents from shortcuts, widget buttons, assist gestures, or settings tiles, navigating directly to the entry screen during both cold starts and warm task resumes.
+- **Hero balance card** with a primary-to-secondary gradient; the balance counts up from zero on launch.
+- **Floating pill toolbar** (`HorizontalFloatingToolbar`) that hides on scroll down and returns on scroll up.
+- **Spring-animated FAB menu**: Add Income, Add Expense, Set Budget, Voice Log.
+- **Container transform** into transaction details from both Dashboard and Transactions via `SharedTransitionLayout`.
+- **Predictive back** (Android 14+) that morphs detail views back into their list items.
 
-### 3. Smart Budgeting & Category Customization
-- **Monthly Budget Limits**: Set custom budget limits for individual expense categories.
-- **Segmented Spent Breakdown Bar**: A visual proportion bar displaying how much of your total spending is allocated to each category, color-coded by the database-configured category colors.
-- **Alert System**: Automatically highlights categories reaching critical spend thresholds (amber at 75%, red when exceeding 90% or overspent).
-- **Category Customization Panel**: Accessible from the budget screen to create, edit, or archive categories. Includes:
-  - Selection of transaction type (Expense or Income) and priority tags (Need, Want, Saving).
-  - A beautiful color picker supporting 8 pre-selected premium color accents.
-- **Category Archiving**: Safely hide/archive categories without destroying historical transaction relationships.
+</details>
 
-### 4. Comprehensive Transaction Tracking
-- **Rich Details**: Add custom titles, merchant names, notes, and attach receipt images.
-- **Direct Receipt Camera Capture**: When attaching a receipt, choose to take a photo directly using the device camera (using a secure local `FileProvider` and `TakePicture` contract) or pick an existing image from the gallery.
-- **Image Persistence**: Receipt attachments are securely copied to internal app storage.
-- **On-Device Receipt OCR Scanner**: Runs local, client-side text recognition (via Google ML Kit Vision) on attached receipt images to extract the merchant's name and total transaction amount, automatically pre-filling empty Title and Amount fields.
+<details>
+<summary><b>Quick entry shortcuts</b></summary>
 
-### 5. Settings, Personalization & Data Controls
-- **Flexible Theme Engine**: Toggle between System Default, Light, and Dark modes.
-- **Premium Color Palettes**: Customize the app appearance with 5 custom Material 3 color schemes (Purple, Blue, Green, Orange, Monochrome Black) or Android 12+ wallpaper-synced Dynamic Material You.
-- **Dashboard Layout Preferences**: Toggle the Daily Safe-to-Spend Dial widget on or off. When disabled, the Primary Budget Limit card automatically spans the full screen width on both phones and tablets.
-- **Notifications Switches**: Choose to schedule or cancel Daily Reminders and enable/disable critical budget alerts.
-- **Data Reconciliation**: Reconcile actual balance discrepancies or reset the manual offset adjustment to revert strictly to computed values.
-- **Secure Data Wipe**: Double-confirmation factory reset in the Danger Zone to erase all custom data safely and restore defaults.
+- **Home-screen widget** (3×2): glassmorphic balance card with large Income / Expense buttons, refreshed on every insert.
+- **Launcher shortcuts**: long-press the icon for Add Expense / Add Income.
+- **Quick Settings tile**: "Quick Expense" opens the recorder from the notification shade.
+- **Assist gesture**: set Kwarta as the default assistant app and long-press Home to log an expense.
+- **Intent routing** in `MainActivity` handles all of the above on both cold and warm starts.
 
-### 6. Offline QR-Based Group Bill Splitter
-- **Shared QR Split Payload**: Input total bill amount and count of people to calculate per-person shares. Generates a QR code carrying the split expense details.
-- **Nearby Share Scanner**: Friends can scan the QR code to instantly approve and record their share as a transaction on their device.
-- **Host Share Logging**: Clicking "Done" on the generator's screen automatically logs the host's own share to their local transaction history and displays a confirmation toast.
+</details>
 
-### 7. Nearby Offline Sync
-- **No-Network Merging**: Share and sync financial records directly with a partner device offline without relying on mobile data or active internet connections.
-- **QR Code Data Exchange**: Compresses and packs the latest 30 logged transactions and their categories into a dense QR code payload using ZXing.
-- **Google Code Scanner Integration**: Allows partners to scan the QR code via Google's code-scanning interface, importing and parsing transactions dynamically.
-- **Smart Duplicate Filtering**: An automatic deduplication engine compares parsed transaction titles, amounts, types, and timestamps, preventing duplicate records from being inserted.
+<details>
+<summary><b>Budgets & categories</b></summary>
 
-### 8. Offline Local Voice Expense Logger
-- **Natural Language Parsing**: Tap the **🎙 Voice Log** FAB menu item to speak a phrase like *"McDonalds 250 pesos"* or *"Salary 50000"* to automatically parse descriptions, amounts, and transaction types.
-- **Zero-Network NLP Model**: Runs regex-based smart heuristic parsing entirely local and offline to instantly log transactions without sending voice data to remote servers.
+- Monthly limits per expense category.
+- Segmented bar showing each category's share of spending, in its own color.
+- Alerts: amber at 75%, red past 90% or overspent.
+- Create, edit or archive categories, with type (Expense / Income), priority (Need / Want / Saving) and 8 accent colors.
+- Archiving keeps historical transactions intact.
 
----
+</details>
 
+<details>
+<summary><b>Transactions</b></summary>
 
-## 🛠️ Technology Stack
+- Title, merchant, notes and receipt image.
+- Capture a receipt with the camera (`FileProvider` + `TakePicture`) or pick from the gallery; images are copied to internal storage.
+- On-device receipt OCR (Google ML Kit) pre-fills empty Title and Amount fields.
+- Export to **CSV** or **PDF** and share through the system sheet.
 
-- **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) (100% Declarative UI)
-- **Design System**: Material 3 Expressive API (`androidx.compose.material3:material3:1.5.0-alpha21`)
-- **Dependency Injection**: [Koin](https://insert-koin.io/)
-- **Database / Local Storage**: [Room ORM](https://developer.android.com/training/data-storage/room) (SQLite)
-- **Asynchronous Flow**: Kotlin Coroutines & `StateFlow` / `SharedFlow`
-- **Architecture**: MVVM (Model-View-ViewModel) + Repository Pattern
+</details>
 
----
+<details>
+<summary><b>Offline voice logger</b></summary>
+
+- Tap **🎙 Voice Log** and speak a phrase like *"Salary 50000"*.
+- Regex-based heuristics extract the description, amount and type locally; no voice data leaves the device.
+
+</details>
+
+<details>
+<summary><b>Group bill splitter & nearby sync</b></summary>
+
+- **Bill splitter**: enter the total and headcount to get per-person shares as a QR code. Friends scan to record their share; tapping **Done** logs the host's share.
+- **Nearby sync**: packs the latest 30 transactions and their categories into a QR (ZXing). The partner scans it with Google Code Scanner, and duplicates (same title, amount, type and time) are skipped.
+
+</details>
+
+<details>
+<summary><b>Settings & data</b></summary>
+
+- Theme: System, Light or Dark.
+- Palettes: Purple, Blue, Green, Orange, Monochrome, or Material You (Android 12+).
+- Toggle the safe-to-spend dial; the budget card expands to fill the row when it's off.
+- Daily reminders and budget alert notifications.
+- Balance reconciliation with a resettable manual offset.
+- Double-confirmed factory reset in the Danger Zone.
+
+</details>
+
+## 🛠️ Tech Stack
+
+| Layer | Choice |
+|---|---|
+| UI | [Jetpack Compose](https://developer.android.com/jetpack/compose), Material 3 Expressive (`material3:1.5.0-alpha21`) |
+| Architecture | MVVM + Repository |
+| DI | [Koin](https://insert-koin.io/) |
+| Storage | [Room](https://developer.android.com/training/data-storage/room) (SQLite) |
+| Async | Kotlin Coroutines, `StateFlow` / `SharedFlow` |
+| Background | WorkManager (daily reminders) |
+| On-device ML | ML Kit Text Recognition, Google Code Scanner, ZXing |
 
 ## 📂 Project Structure
 
 ```text
-Kwarta/
-├── app/
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/example/kwarta/
-│   │   │   │   ├── data/
-│   │   │   │   │   ├── local/         # Room Database Entities, DAOs & AppDatabase
-│   │   │   │   │   └── repository/    # Finance Repository & implementation
-│   │   │   │   ├── di/                # Koin Dependency Injection Modules
-│   │   │   │   ├── tile/              # Quick Settings Tile Service (QuickExpenseTileService)
-│   │   │   │   ├── ui/
-│   │   │   │   │   ├── components/    # Reusable UI widgets (e.g., ExpressiveBudgetRing)
-│   │   │   │   │   ├── navigation/    # Navigation destinations, host and deep-link host routing
-│   │   │   │   │   ├── screens/       # Dashboard, Budgets, and Transactions views
-│   │   │   │   │   └── theme/         # Material Theme definitions (Color, Typography, Shape)
-│   │   │   │   ├── widget/            # App Widget Provider and broadcast updater utility
-│   │   │   │   ├── KwartaApplication.kt
-│   │   │   │   └── MainActivity.kt
+app/src/main/java/com/example/kwarta/
+├── data/
+│   ├── local/          # Room entities, DAOs, AppDatabase, migrations
+│   └── repository/     # FinanceRepository + implementation
+├── di/                 # Koin modules
+├── notification/       # Channels, budget alerts, daily reminder worker
+├── tile/               # Quick Settings tile (QuickExpenseTileService)
+├── ui/
+│   ├── components/     # Reusable widgets (e.g. ExpressiveBudgetRing)
+│   ├── navigation/     # Destinations, NavHost, deep-link routing
+│   ├── screens/        # Dashboard, Transactions, Budgets, Settings, Onboarding
+│   └── theme/          # Color, Typography, Shape
+├── utils/              # Voice & receipt parsers, export helper
+├── widget/             # App widget provider + updater
+├── KwartaApplication.kt
+└── MainActivity.kt
 ```
 
----
+## 🏗️ Build & Run
 
-## 🛠️ Build & Run Instructions
+**Requirements:** JDK 17+ (Android Studio's bundled JBR works) and Android SDK 37. Runs on Android 11 (API 30) and up.
 
-### Prerequisites
-- JDK 17 or JDK 21
-- Android SDK (API 34+)
+```bash
+# Compile
+./gradlew compileDebugKotlin
 
-### Compilation
-To compile the Kotlin files and verify the codebase is error-free, run:
-```powershell
-.\gradlew compileDebugKotlin "-Dorg.gradle.java.home=C:\Program Files\Android\Android Studio\jbr"
+# Build a debug APK
+./gradlew assembleDebug
+
+# Install on a connected device or emulator
+./gradlew installDebug
 ```
 
-### Building the Debug APK
-To compile, package, and generate a debug APK:
-```powershell
-.\gradlew assembleDebug "-Dorg.gradle.java.home=C:\Program Files\Android\Android Studio\jbr"
-```
-
-### Running the App
-To install and run the application on an active Android device or emulator:
-```powershell
-.\gradlew installDebug "-Dorg.gradle.java.home=C:\Program Files\Android\Android Studio\jbr"
-```
+> On Windows, use `.\gradlew` and, if Gradle can't find a JDK, point it at Android Studio's:
+> `.\gradlew assembleDebug "-Dorg.gradle.java.home=C:\Program Files\Android\Android Studio\jbr"`
