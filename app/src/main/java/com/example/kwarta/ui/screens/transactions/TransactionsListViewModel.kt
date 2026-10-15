@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 data class TransactionWithCategory(
@@ -108,6 +109,43 @@ class TransactionsListViewModel(
             matchesType && matchesCat && matchesDate && matchesQuery
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Reactive totals computed from the already-filtered transaction list
+    val totalIncome = transactions
+        .map { list -> list.filter { it.transaction.type == "INCOME" }.sumOf { it.transaction.amount } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val totalExpense = transactions
+        .map { list -> list.filter { it.transaction.type == "EXPENSE" }.sumOf { it.transaction.amount } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val filterDescription = combine(
+        _selectedTypeFilter,
+        _selectedDateFilter,
+        _customMonth
+    ) { type, date, month ->
+        buildFilterDescription(type, date, month)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "All Time · All Types")
+
+    private fun buildFilterDescription(type: String, dateFilter: String, customMonth: YearMonth?): String {
+        val parts = mutableListOf<String>()
+
+        when (dateFilter) {
+            "TODAY" -> parts.add("Today")
+            "WEEK" -> parts.add("This Week")
+            "MONTH" -> parts.add(LocalDate.now().month.name.lowercase().replaceFirstChar { it.uppercase() })
+            "CUSTOM_MONTH" -> parts.add(customMonth?.month?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Custom Month")
+            "ALL" -> parts.add("All Time")
+            else -> parts.add("Custom Range")
+        }
+
+        when (type) {
+            "INCOME" -> parts.add("Income")
+            "EXPENSE" -> parts.add("Expense")
+        }
+
+        return parts.joinToString(" · ")
+    }
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query

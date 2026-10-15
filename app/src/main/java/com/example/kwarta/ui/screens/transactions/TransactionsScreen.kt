@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.automirrored.filled.CallSplit
+import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ButtonGroupDefaults
@@ -35,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,6 +57,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import com.example.kwarta.ui.navigation.LocalSharedTransitionScope
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
+import com.example.kwarta.utils.ExportData
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -75,8 +79,21 @@ fun TransactionsScreen(
 
     var isSearchActive by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
+    var showExportSheet by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showMonthPicker by remember { mutableStateOf(false) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
+
+    // Adaptive breakpoint: collapse secondary actions (Sync, Split Bill,
+    // Export) into an overflow menu on compact (phone) widths, but surface
+    // every action directly on medium+ widths (tablet / landscape) where
+    // there's room. Uses the canonical Material 3 width breakpoint.
+    val configuration = LocalConfiguration.current
+    val isCompactWidth = configuration.screenWidthDp < 600
+
+    val totalIncome by viewModel.totalIncome.collectAsStateWithLifecycle()
+    val totalExpense by viewModel.totalExpense.collectAsStateWithLifecycle()
+    val filterDescription by viewModel.filterDescription.collectAsStateWithLifecycle()
 
     // Clear search query and state when screen is entered / re-entered
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -149,12 +166,6 @@ fun TransactionsScreen(
                     scrollBehavior = scrollBehavior,
                     title = { Text("All Transactions") },
                     actions = {
-                        IconButton(onClick = onSyncClick) {
-                            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = "Sync Transactions")
-                        }
-                        IconButton(onClick = onBillSplitClick) {
-                            Icon(imageVector = Icons.AutoMirrored.Filled.CallSplit, contentDescription = "Split Bill")
-                        }
                         IconButton(onClick = { isSearchActive = true }) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
                         }
@@ -170,6 +181,69 @@ fun TransactionsScreen(
                                             .align(Alignment.TopEnd)
                                     )
                                 }
+                            }
+                        }
+
+                        if (isCompactWidth) {
+                            // Compact (phone): surface Search + Filter directly,
+                            // collapse secondary actions into an overflow menu.
+                            Box {
+                                IconButton(onClick = { showOverflowMenu = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "More")
+                                }
+                                DropdownMenu(
+                                    expanded = showOverflowMenu,
+                                    onDismissRequest = { showOverflowMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Sync Transactions") },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            onSyncClick()
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Split Bill") },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            onBillSplitClick()
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.AutoMirrored.Filled.CallSplit, contentDescription = null)
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Export") },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            if (transactions.isNotEmpty()) {
+                                                showExportSheet = true
+                                            }
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.IosShare, contentDescription = null)
+                                        },
+                                        enabled = transactions.isNotEmpty()
+                                    )
+                                }
+                            }
+                        } else {
+                            // Medium+ (tablet / landscape): show all actions directly.
+                            IconButton(onClick = onSyncClick) {
+                                Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = "Sync Transactions")
+                            }
+                            IconButton(onClick = onBillSplitClick) {
+                                Icon(imageVector = Icons.AutoMirrored.Filled.CallSplit, contentDescription = "Split Bill")
+                            }
+                            IconButton(onClick = {
+                                if (transactions.isNotEmpty()) {
+                                    showExportSheet = true
+                                }
+                            }) {
+                                Icon(Icons.Default.IosShare, contentDescription = "Export")
                             }
                         }
                     }
@@ -472,6 +546,19 @@ fun TransactionsScreen(
                 }
             }
         }
+    }
+
+    if (showExportSheet) {
+        ExportFormatBottomSheet(
+            exportData = ExportData(
+                transactions = transactions,
+                totalIncome = totalIncome,
+                totalExpense = totalExpense,
+                netBalance = totalIncome - totalExpense,
+                filterDescription = filterDescription
+            ),
+            onDismiss = { showExportSheet = false }
+        )
     }
 
     if (showDatePicker) {

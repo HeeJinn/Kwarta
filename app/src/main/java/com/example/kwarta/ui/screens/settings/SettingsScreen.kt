@@ -471,7 +471,7 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Kwarta v1.0.0",
+                        text = "Kwarta v1.2.0",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -493,7 +493,7 @@ fun SettingsScreen(
                             try {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
                                     data = android.net.Uri.parse("mailto:knribnitez@gmail.com")
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Kwarta v1.0.0 Feedback")
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Kwarta v1.2.0 Feedback")
                                 }
                                 context.startActivity(intent)
                             } catch (e: Exception) {

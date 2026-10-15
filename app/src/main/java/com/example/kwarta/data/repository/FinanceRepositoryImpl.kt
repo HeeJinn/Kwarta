@@ -6,46 +6,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
-
 class FinanceRepositoryImpl(
     private val context: Context,
     private val transactionDao: TransactionDao,
     private val categoryDao: CategoryDao,
     private val budgetDao: BudgetDao
 ) : FinanceRepository {
-    
+
     private val prefs = context.getSharedPreferences("kwarta_prefs", Context.MODE_PRIVATE)
-    
-    init {
-        CoroutineScope(Dispatchers.IO).launch {
-            seedDatabase()
-        }
-    }
 
-    private suspend fun seedDatabase() {
-        val existing = categoryDao.getActiveCategoriesByType("BOTH").firstOrNull() ?: emptyList()
-        val existingIncome = categoryDao.getActiveCategoriesByType("INCOME").firstOrNull() ?: emptyList()
-        val existingExpense = categoryDao.getActiveCategoriesByType("EXPENSE").firstOrNull() ?: emptyList()
-        
-        if (existing.isEmpty() && existingIncome.isEmpty() && existingExpense.isEmpty()) {
-            val foodCat = CategoryEntity(name = "Food", iconName = "Restaurant", colorHex = "#FF5722", transactionType = "EXPENSE", priorityTag = "NEED")
-            val defaultCategories = listOf(
-                foodCat,
-                CategoryEntity(name = "Rent", iconName = "Home", colorHex = "#3F51B5", transactionType = "EXPENSE", priorityTag = "NEED"),
-                CategoryEntity(name = "Salary", iconName = "AttachMoney", colorHex = "#4CAF50", transactionType = "INCOME", priorityTag = "WANT"),
-                CategoryEntity(name = "Transport", iconName = "DirectionsCar", colorHex = "#FFC107", transactionType = "EXPENSE", priorityTag = "NEED"),
-                CategoryEntity(name = "Entertainment", iconName = "Movie", colorHex = "#9C27B0", transactionType = "EXPENSE", priorityTag = "WANT")
-            )
-            // Insert default categories
-            defaultCategories.forEach { categoryDao.insert(it) }
-        }
-    }
-
-    override fun getRecentTransactions(): Flow<List<TransactionEntity>> = 
+    override fun getRecentTransactions(): Flow<List<TransactionEntity>> =
         transactionDao.getRecentTransactions()
 
     override fun getAllTransactions(): Flow<List<TransactionEntity>> = 
@@ -212,7 +182,9 @@ class FinanceRepositoryImpl(
         transactionDao.deleteAll()
         budgetDao.deleteAll()
         categoryDao.deleteAll()
-        seedDatabase()
+        // Re-seed defaults through the shared source used by the DB's
+        // onCreate callback, so a wipe restores the original categories.
+        DefaultCategories.list.forEach { categoryDao.insert(it) }
         setInitialBalanceOffset(0.0)
         setOnboardingCompleted(false)
     }

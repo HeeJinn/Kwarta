@@ -15,3 +15,10 @@
 local.properties
 
 .fake
+
+# Build outputs — APKs, baseline profiles and metadata are artifacts,
+# not source. Generated fresh by every release build.
+/app/release/
+*.apk
+*.aab
+*.dm
